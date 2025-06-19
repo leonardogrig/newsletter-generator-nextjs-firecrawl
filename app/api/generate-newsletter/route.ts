@@ -100,7 +100,7 @@ Just provide the news items in the exact format shown above.`;
 
     const response = await openai.chat.completions.create({
       model: process.env.OPENROUTER_API_KEY
-        ? "anthropic/claude-4.0-sonnet"
+        ? "anthropic/claude-sonnet-4"
         : "gpt-4o-mini",
       messages: [
         {

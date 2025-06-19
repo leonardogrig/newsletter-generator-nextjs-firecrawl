@@ -20,7 +20,7 @@ export function DateRangeFetch({
 }: DateRangeFetchProps) {
   return (
     <Card className="bg-white border shadow-lg">
-      <CardContent className="pt-6">
+      <CardContent className="pt-6 flex flex-row gap-4 justify-between">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-center gap-2">
             <CalendarDays className="w-4 h-4" />
@@ -41,14 +41,14 @@ export function DateRangeFetch({
               className="w-[160px]"
             />
           </div>
-          <Button
-            onClick={onFetchNews}
-            size="lg"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
-          >
-            🚀 Batch Scrape + AI
-          </Button>
         </div>
+        <Button
+          onClick={onFetchNews}
+          size="lg"
+          className="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+        >
+          🚀 Batch Scrape + AI
+        </Button>
       </CardContent>
     </Card>
   );
