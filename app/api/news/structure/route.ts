@@ -276,6 +276,7 @@ Please extract the structured article data in the specified JSON format.`,
           publishedAt: structuredData.publishedAt
             ? new Date(structuredData.publishedAt)
             : null,
+          // brandScore is not updated here - it's set during fetch-news
           isSelected: true, // Mark as active/selected for newsletter generation
           structured: true, // Mark as structured
         },
@@ -292,6 +293,7 @@ Please extract the structured article data in the specified JSON format.`,
         hasValidArticle: true,
         breadcrumb: structuredData.breadcrumb,
         category: structuredData.category,
+        // brandScore is preserved from initial fetch-news scoring
       });
     } catch (parseError) {
       console.error("❌ Failed to parse LLM response:", parseError);

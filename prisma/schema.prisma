@@ -57,6 +57,7 @@ model News {
   scrapedAt   DateTime  @default(now())
   isSelected  Boolean   @default(false)
   structured  Boolean   @default(false) // Whether the article has been structured/processed
+  brandScore  Float? // Brand relevance score (0-10, can be null)
 
   // For newsletter generation context
   newsletters NewsletterNews[]
@@ -88,4 +89,13 @@ model NewsletterNews {
 
   @@unique([newsletterId, newsId])
   @@map("newsletter_news")
+}
+
+model BrandContext {
+  id           String   @id @default(cuid())
+  instructions String   @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("brand_context")
 }

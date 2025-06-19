@@ -166,9 +166,25 @@ export function NewsItemCard({
                 )}
               </div>
               <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full whitespace-nowrap">
-                  {characterCount.toLocaleString()} chars
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full whitespace-nowrap">
+                    {characterCount.toLocaleString()} chars
+                  </span>
+                  {news.brandScore !== null &&
+                    news.brandScore !== undefined && (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ${
+                          news.brandScore >= 8
+                            ? "bg-green-100 text-green-800"
+                            : news.brandScore >= 6
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        Score: {news.brandScore.toFixed(1)}/10
+                      </span>
+                    )}
+                </div>
                 {!isStructured && (
                   <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs whitespace-nowrap">
                     Needs Structure

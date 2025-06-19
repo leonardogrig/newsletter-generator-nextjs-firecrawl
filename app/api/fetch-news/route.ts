@@ -6,7 +6,8 @@ const prisma = new PrismaClient();
 // Function to create posts from scraped content using LLM
 async function createPostsFromContent(
   scrapedData: any[],
-  dateRange?: any
+  dateRange?: any,
+  brandInstructions?: string
 ): Promise<any[]> {
   if (!process.env.OPENROUTER_API_KEY) {
     throw new Error("OpenRouter API key not configured");
@@ -54,14 +55,19 @@ async function createPostsFromContent(
 INSTRUCTIONS:
 1. Analyze each provided web page content (typically blog listing pages)
 2. Extract all article links/titles that fall within the specified date range
-3. For each article found, extract only:
+3. For each article found, extract:
    - A clean, descriptive title
    - The article URL (if different from the page URL)
    - The publication date (if visible on the listing page)
+   - Brand relevance score (0-10) if brand context is provided, null otherwise
 4. IMPORTANT: Only include articles that are published within the specified date range
 5. This is just for discovering available articles - detailed content extraction happens later
 
-Focus on finding articles within the date range that would be valuable for a newsletter.`,
+Focus on finding articles within the date range that would be valuable for a newsletter.${
+              brandInstructions
+                ? " Score each article's relevance to the provided brand context."
+                : ""
+            }`,
           },
           {
             role: "user",
@@ -71,17 +77,28 @@ Focus on finding articles within the date range that would be valuable for a new
               dateRange?.to ? new Date(dateRange.to).toDateString() : "Any"
             }
 
-${preparedContent
-  .map(
-    (item) => `
+${
+  brandInstructions
+    ? `Brand Context for Relevance Scoring:
+${brandInstructions}
+
+`
+    : ""
+}${preparedContent
+              .map(
+                (item) => `
 PAGE ${item.index}:
 URL: ${item.url}
 Markdown: ${item.content}
 ---`
-  )
-  .join("\n")}
+              )
+              .join("\n")}
 
-Please extract articles within the specified date range in the JSON format.`,
+Please extract articles within the specified date range in the JSON format.${
+              brandInstructions
+                ? " Score each article's relevance to the brand context on a scale of 0-10."
+                : " Set brandScore to null for all articles since no brand context was provided."
+            }`,
           },
         ],
         response_format: {
@@ -110,8 +127,13 @@ Please extract articles within the specified date range in the JSON format.`,
                         description:
                           "Publication date in YYYY-MM-DD format if visible on the listing page, empty string if not found",
                       },
+                      brandScore: {
+                        type: ["number", "null"],
+                        description:
+                          "Relevance score to brand context (0-10 scale, where 10 is extremely relevant). Null if no brand context provided.",
+                      },
                     },
-                    required: ["title", "url", "publishedDate"],
+                    required: ["title", "url", "publishedDate", "brandScore"],
                     additionalProperties: false,
                   },
                 },
@@ -191,6 +213,10 @@ Please extract articles within the specified date range in the JSON format.`,
           publishedAt: article.publishedDate
             ? new Date(article.publishedDate)
             : null, // Set from discovery, can be updated during structure process
+          brandScore:
+            brandInstructions && brandInstructions.trim()
+              ? article.brandScore
+              : null, // Only save score if brand instructions provided
           scrapedAt: new Date(),
           isSelected: false, // Not selected by default
           structured: false, // Not structured yet - needs structure button click
@@ -215,7 +241,7 @@ Please extract articles within the specified date range in the JSON format.`,
 
 export async function POST(request: Request) {
   try {
-    const { urls, dateRange } = await request.json();
+    const { urls, dateRange, brandInstructions } = await request.json();
 
     console.log("🔥 Starting batch scrape for URLs:", urls.length);
 
@@ -254,6 +280,9 @@ export async function POST(request: Request) {
 
     if (!batchScrapeResponse.ok) {
       const errorText = await batchScrapeResponse.text();
+
+      console.log("Website atempted now: ", urls);
+
       console.error("❌ Failed to start batch scrape:", errorText);
       return NextResponse.json(
         { error: "Failed to start batch scrape" },
@@ -323,7 +352,8 @@ export async function POST(request: Request) {
           try {
             newsItems = await createPostsFromContent(
               validScrapedData,
-              dateRange
+              dateRange,
+              brandInstructions
             );
           } catch (error) {
             console.error("❌ Failed to process content with LLM:", error);

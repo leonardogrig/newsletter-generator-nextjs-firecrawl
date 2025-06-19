@@ -6,10 +6,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Select, SelectItem } from "@/components/ui/select";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
 
 import { NewsItemCard } from "./SortableNewsItem";
 import type { NewsItem } from "./types";
+
+type SortOption = "date-desc" | "date-asc" | "score-desc" | "score-asc";
 
 interface NewsItemsListProps {
   newsItems: NewsItem[];
@@ -34,27 +38,56 @@ export function NewsItemsList({
   onGenerateNewsletter,
   onToggleCollapsed,
 }: NewsItemsListProps) {
-  // Sort news items by priority: active items first, then by date
-  const sortedNewsItems = [...newsItems].sort((a, b) => {
-    // First priority: Active/selected items come first
-    if (a.isSelected && !b.isSelected) return -1;
-    if (!a.isSelected && b.isSelected) return 1;
+  const [sortBy, setSortBy] = useState<SortOption>("date-desc");
 
-    // Within each group (active/inactive), sort by date
-    // Use publishedAt if available, then extractedDate, then scrapedAt
-    const getDateForSorting = (item: NewsItem) => {
-      if (item.publishedAt) return new Date(item.publishedAt);
-      if (item.extractedDate) return new Date(item.extractedDate);
-      return new Date(item.scrapedAt);
-    };
+  // Sort news items based on selected option
+  const getSortedNewsItems = () => {
+    const sorted = [...newsItems].sort((a, b) => {
+      // First priority: Active/selected items come first
+      if (a.isSelected && !b.isSelected) return -1;
+      if (!a.isSelected && b.isSelected) return 1;
 
-    const dateA = getDateForSorting(a);
-    const dateB = getDateForSorting(b);
+      // Within each group (active/inactive), sort by selected criteria
+      switch (sortBy) {
+        case "date-desc": {
+          const getDateForSorting = (item: NewsItem) => {
+            if (item.publishedAt) return new Date(item.publishedAt);
+            if (item.extractedDate) return new Date(item.extractedDate);
+            return new Date(item.scrapedAt);
+          };
+          const dateA = getDateForSorting(a);
+          const dateB = getDateForSorting(b);
+          return dateB.getTime() - dateA.getTime(); // Most recent first
+        }
+        case "date-asc": {
+          const getDateForSorting = (item: NewsItem) => {
+            if (item.publishedAt) return new Date(item.publishedAt);
+            if (item.extractedDate) return new Date(item.extractedDate);
+            return new Date(item.scrapedAt);
+          };
+          const dateA = getDateForSorting(a);
+          const dateB = getDateForSorting(b);
+          return dateA.getTime() - dateB.getTime(); // Oldest first
+        }
+        case "score-desc": {
+          const scoreA = a.brandScore ?? -1;
+          const scoreB = b.brandScore ?? -1;
+          return scoreB - scoreA; // Highest score first
+        }
+        case "score-asc": {
+          const scoreA = a.brandScore ?? 11; // Put null scores at the end
+          const scoreB = b.brandScore ?? 11;
+          return scoreA - scoreB; // Lowest score first
+        }
+        default:
+          return 0;
+      }
+    });
 
-    // Sort in descending order (most recent first)
-    return dateB.getTime() - dateA.getTime();
-  });
+    return sorted;
+  };
 
+  const sortedNewsItems = getSortedNewsItems();
   const activeItemsCount = newsItems.filter((item) => item.isSelected).length;
 
   return (
@@ -96,15 +129,36 @@ export function NewsItemsList({
               )}
             </div>
           </div>
-          {activeItemsCount > 0 && (
-            <Button
-              onClick={onGenerateNewsletter}
-              disabled={isGenerating}
-              className="cursor-pointer"
-            >
-              {isGenerating ? "Generating..." : "Generate Newsletter"}
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            {!isCollapsed && newsItems.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Sort by:</span>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) => setSortBy(value as SortOption)}
+                  className="w-48"
+                >
+                  <SelectItem value="date-desc">
+                    Date (Recent to Old)
+                  </SelectItem>
+                  <SelectItem value="date-asc">Date (Old to Recent)</SelectItem>
+                  <SelectItem value="score-desc">
+                    Score (High to Low)
+                  </SelectItem>
+                  <SelectItem value="score-asc">Score (Low to High)</SelectItem>
+                </Select>
+              </div>
+            )}
+            {activeItemsCount > 0 && (
+              <Button
+                onClick={onGenerateNewsletter}
+                disabled={isGenerating}
+                className="cursor-pointer"
+              >
+                {isGenerating ? "Generating..." : "Generate Newsletter"}
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       {!isCollapsed && (

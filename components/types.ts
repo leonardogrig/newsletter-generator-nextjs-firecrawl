@@ -20,6 +20,7 @@ export interface NewsItem {
   extractedDate?: string | null;
   breadcrumb?: string;
   category?: string;
+  brandScore?: number | null;
 }
 
 export interface Newsletter {

@@ -16,3 +16,4 @@
 - never use any "npm" command.
 - no need to run "yarn dev" after a task
 - no need to update the readme if not specifically asked for.
+- when trying to add a component (example: yarn add @radix-ui/react-select), if it fails just stop and ask the user to install it, do not try to re-create the component.

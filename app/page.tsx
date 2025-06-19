@@ -19,6 +19,8 @@ export default function NewsletterGenerator() {
   const [urls, setUrls] = useState<Url[]>([]);
   const [newUrl, setNewUrl] = useState("");
   const [newUrlName, setNewUrlName] = useState("");
+  const [brandInstructions, setBrandInstructions] = useState("");
+  const [savedBrandInstructions, setSavedBrandInstructions] = useState("");
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
   const [startDate, setStartDate] = useState<Date | undefined>(
@@ -40,6 +42,7 @@ export default function NewsletterGenerator() {
     loadUrls();
     loadPreviousNews();
     loadNewsletters();
+    loadBrandContext();
   }, []);
 
   // API Functions
@@ -73,6 +76,40 @@ export default function NewsletterGenerator() {
     } catch (error) {
       console.error("Failed to load newsletters:", error);
       toast.error("Failed to load newsletters");
+    }
+  };
+
+  const loadBrandContext = async () => {
+    try {
+      const response = await fetch("/api/brand-context");
+      const data = await response.json();
+      setBrandInstructions(data.instructions || "");
+      setSavedBrandInstructions(data.instructions || "");
+    } catch (error) {
+      console.error("Failed to load brand context:", error);
+      // Don't show error toast for this as it's not critical
+    }
+  };
+
+  // Brand Instructions Functions
+  const saveBrandInstructions = async () => {
+    try {
+      const response = await fetch("/api/brand-context", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructions: brandInstructions }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save brand context");
+      }
+
+      const data = await response.json();
+      setSavedBrandInstructions(data.instructions);
+      toast.success("Brand context saved successfully!");
+    } catch (error) {
+      console.error("Failed to save brand context:", error);
+      toast.error("Failed to save brand context");
     }
   };
 
@@ -149,6 +186,7 @@ export default function NewsletterGenerator() {
         body: JSON.stringify({
           urls: urls.map((u) => u.url),
           dateRange: { from: startDate, to: endDate },
+          brandInstructions: savedBrandInstructions,
         }),
       });
 
@@ -351,9 +389,12 @@ export default function NewsletterGenerator() {
               urls={urls}
               newUrl={newUrl}
               newUrlName={newUrlName}
+              brandInstructions={brandInstructions}
               isCollapsed={isUrlSectionCollapsed}
               onNewUrlChange={setNewUrl}
               onNewUrlNameChange={setNewUrlName}
+              onBrandInstructionsChange={setBrandInstructions}
+              onSaveBrandInstructions={saveBrandInstructions}
               onAddUrl={addUrl}
               onRemoveUrl={removeUrl}
               onToggleCollapsed={() =>
