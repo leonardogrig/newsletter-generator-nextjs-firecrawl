@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Url {
+  id        String   @id @default(cuid())
+  url       String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("urls")
+}
+
+model BatchScrape {
+  id           String            @id @default(cuid())
+  jobId        String            @unique // Firecrawl batch scrape job ID
+  urls         String[] // Array of URLs being scraped
+  status       BatchScrapeStatus @default(PENDING)
+  startedAt    DateTime          @default(now())
+  completedAt  DateTime?
+  errorMessage String?
+  totalPages   Int? // Total pages found
+  pagesScraped Int? // Pages actually scraped
+
+  @@map("batch_scrapes")
+}
+
+enum BatchScrapeStatus {
+  PENDING
+  SCRAPING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model News {
+  id          String    @id @default(cuid())
+  title       String
+  summary     String    @db.Text
+  fullContent String?   @db.Text // Store full scraped content
+  url         String
+  sourceUrl   String
+  publishedAt DateTime?
+  scrapedAt   DateTime  @default(now())
+  isSelected  Boolean   @default(false)
+  structured  Boolean   @default(false) // Whether the article has been structured/processed
+
+  // For newsletter generation context
+  newsletters NewsletterNews[]
+
+  @@map("news")
+}
+
+model Newsletter {
+  id          String    @id @default(cuid())
+  title       String?
+  content     String    @db.Text
+  generatedAt DateTime  @default(now())
+  savedAt     DateTime?
+
+  // Relations
+  news NewsletterNews[]
+
+  @@map("newsletters")
+}
+
+model NewsletterNews {
+  id           String @id @default(cuid())
+  newsletterId String
+  newsId       String
+  order        Int    @default(0)
+
+  newsletter Newsletter @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+  news       News       @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@unique([newsletterId, newsId])
+  @@map("newsletter_news")
+}

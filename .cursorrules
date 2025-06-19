@@ -1,0 +1,18 @@
+## Project Overview
+
+- This is a Next.js project with Prisma and Tailwind CSS.
+- Always use yarn to install dependencies.
+- For prisma you should use the following commands:
+
+  - yarn prisma db push
+  - yarn prisma generate
+
+- Never change the "output = "../app/generated/prisma" from the schema.prisma file.
+- Never let a file get too big without modularizing it.
+- Always use a nice naming approach.
+- Always check the lib folder to see if the desired function wasn't already implemented.
+- When implementing crud operation buttons always make that button disabled when clicked on until the result comes back to avoid multiple clicks.
+
+- never use any "npm" command.
+- no need to run "yarn dev" after a task
+- no need to update the readme if not specifically asked for.
