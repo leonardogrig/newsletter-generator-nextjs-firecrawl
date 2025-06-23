@@ -55,27 +55,14 @@ ${previousNewsletters
       )
       .join("\n\n");
 
-    const prompt = `You are a professional newsletter writer. Create a newsletter from the following news articles using this EXACT structure and style:
+    const prompt = `You are a professional newsletter writer. Create a newsletter from the following news articles:
 
 ${previousContext}
 
 Current news articles to include:
 ${newsContent}
 
-CRITICAL INSTRUCTIONS - Follow this structure EXACTLY:
-
-Each news item must follow this precise format:
-**[Engaging Hook/Title]**: [Objective description of the news]. [Additional context or details]. Source: [Source].
-
 Between each news item, add a blank line (---)
-
-EXAMPLE of the EXACT structure to follow:
-
-Next-generation Xbox is being developed by Microsoft: The company, in partnership with AMD, aims to create a gaming experience that isn't restricted to a single store or device. Additionally, the company states that it is working closely with the Windows team to consolidate the operating system as the main platform for games. The information comes from The Verge.
-
----
-
-For the first time, streaming surpasses combined audience of broadcast and cable TV in the U.S.: According to a report, streaming accounted for 44.8% of all consumption in May, compared to the combined 44.2% of broadcast TV (20.1%) and cable (24.1%). Since the same period in 2021, Netflix has seen a 27% increase in viewership, while YouTube grew by over 120% and accounted for 12.5% of total TV audience last month — the highest ever reached by a single platform. No data is available for other countries. The information comes from Nielsen.
 
 REQUIREMENTS:
 1. Start each item with an engaging hook/title followed by a colon
@@ -95,8 +82,7 @@ Do NOT include:
 - Bullet points or numbered lists
 - Editorial commentary or opinions
 - Add any fake news or misinformation or even additional information that is not in the article
-
-Just provide the news items in the exact format shown above.`;
+`;
 
     const response = await openai.chat.completions.create({
       model: process.env.OPENROUTER_API_KEY
