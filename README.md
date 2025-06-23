@@ -1,255 +1,482 @@
-# Newsletter Generator
+# 📧 AI Newsletter Generator
 
-A modern, AI-powered newsletter generator built with Next.js that fetches news from multiple sources using Firecrawl and creates professional newsletters using OpenRouter/OpenAI.
+> Transform news websites into professional newsletters with AI-powered content processing and intelligent article curation.
 
-## Features
+A modern, intelligent newsletter generator that automatically crawls news websites, processes content with AI, and creates professional newsletters. Built with Next.js, it features drag-and-drop article management, AI-powered content generation, and a beautiful, responsive interface.
 
-- **URL Management**: Add and manage news source URLs
-- **Intelligent News Crawling**: Uses Firecrawl's Crawl API to crawl news websites and extract articles
-- **AI-Powered Content Processing**: Uses OpenRouter LLM to structure crawled content into news articles
-- **AI-Powered Newsletter Generation**: Creates professional newsletters using OpenRouter/OpenAI
-- **Interactive News Selection**: Click to select/deselect news items for inclusion
-- **Drag & Drop Reordering**: Reorganize news items by importance
-- **Markdown Editor**: Edit generated newsletters with a clean interface
-- **Context-Aware Generation**: Uses previous newsletters for consistency
-- **Modern UI**: Built with Shadcn/UI and Tailwind CSS
-- **Database Persistence**: Stores URLs, news, and newsletters in PostgreSQL
+## ✨ Features
 
-## Tech Stack
+- **🌐 Smart Web Crawling**: Automatically crawl news websites using Firecrawl API
+- **🤖 AI Content Processing**: Extract and structure articles with OpenRouter/OpenAI
+- **📊 Brand Relevance Scoring**: AI rates articles based on your brand context (0-10 scale)
+- **🎯 Intelligent Article Selection**: Click to select/deselect articles for newsletters
+- **📱 Drag & Drop Interface**: Reorder articles by importance with intuitive controls
+- **✏️ Markdown Editor**: Edit generated newsletters with live preview
+- **📈 Context-Aware Generation**: Uses previous newsletters for consistency
+- **🎨 Modern UI**: Beautiful interface built with Shadcn/UI and Tailwind CSS
+- **💾 Database Persistence**: Stores all data in PostgreSQL with Prisma ORM
+
+## 🛠 Tech Stack
 
 - **Frontend**: Next.js 15, React 19, TypeScript
-- **UI**: Shadcn/UI, Tailwind CSS, Lucide React
-- **Backend**: Next.js API routes
+- **UI Framework**: Shadcn/UI, Tailwind CSS, Lucide React Icons
+- **Backend**: Next.js API Routes
 - **Database**: PostgreSQL with Prisma ORM
-- **AI Services**: OpenRouter/OpenAI for newsletter generation
-- **Web Crawling**: Firecrawl Crawl API
+- **AI Services**: OpenRouter (Claude/GPT) or OpenAI for content generation
+- **Web Scraping**: Firecrawl API for intelligent web crawling
 - **Package Manager**: Yarn
 
-## Prerequisites
+## 📋 Prerequisites
 
-- Node.js 18+ and Yarn
-- PostgreSQL database
-- Firecrawl API key
-- OpenRouter API key (or OpenAI API key)
+Before you begin, you'll need:
 
-## Setup Instructions
+- A computer running Windows, macOS, or Linux
+- Internet connection
+- A PostgreSQL database (we'll help you set this up)
+- API keys for Firecrawl and OpenRouter/OpenAI (we'll guide you through this)
 
-### 1. Clone and Install Dependencies
+## 🚀 Installation Guide
+
+### Step 1: Install Node.js and npm
+
+Node.js is a JavaScript runtime that lets you run this application. npm comes bundled with Node.js.
+
+#### Windows
+
+1. Visit [Node.js official website](https://nodejs.org/)
+2. Download the "LTS" version (recommended for most users)
+3. Run the downloaded installer (.msi file)
+4. Follow the installation wizard (accept all default settings)
+5. Open Command Prompt and verify installation:
+   ```cmd
+   node --version
+   npm --version
+   ```
+
+#### macOS
+
+**Option 1: Direct Download**
+
+1. Visit [Node.js official website](https://nodejs.org/)
+2. Download the "LTS" version
+3. Open the downloaded .pkg file and follow the installer
+
+**Option 2: Using Homebrew (if you have it)**
 
 ```bash
-git clone <your-repo-url>
-cd newsletter-generator
-yarn install
+brew install node
 ```
 
-### 2. Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/newsletter_db"
-
-# Firecrawl API (required)
-FIRECRAWL_API_KEY="fc-your-firecrawl-api-key"
-
-# OpenRouter API (required for content processing and newsletter generation)
-OPENROUTER_API_KEY="sk-or-your-openrouter-key"
-
-# Optional: Site URL for OpenRouter headers
-SITE_URL="http://localhost:3000"
-```
-
-### 3. Database Setup
+**Verification:**
 
 ```bash
-# Generate Prisma client
-yarn db:generate
+node --version
+npm --version
+```
 
-# Push schema to database
-yarn db:push
+#### Linux (Ubuntu/Debian)
 
-# Optional: Open Prisma Studio to view data
+```bash
+# Update package index
+sudo apt update
+
+# Install Node.js and npm
+sudo apt install nodejs npm
+
+# Verify installation
+node --version
+npm --version
+```
+
+#### Linux (CentOS/RHEL/Fedora)
+
+```bash
+# For CentOS/RHEL
+sudo yum install nodejs npm
+
+# For Fedora
+sudo dnf install nodejs npm
+
+# Verify installation
+node --version
+npm --version
+```
+
+### Step 2: Install Yarn
+
+Yarn is a package manager that's faster and more reliable than npm for this project.
+
+#### All Platforms
+
+```bash
+npm install -g yarn
+```
+
+Verify installation:
+
+```bash
+yarn --version
+```
+
+### Step 3: Set Up PostgreSQL Database
+
+You have several options for PostgreSQL:
+
+#### Option A: Local Installation
+
+**Windows:**
+
+1. Download from [PostgreSQL official site](https://www.postgresql.org/download/windows/)
+2. Run installer and follow setup wizard
+3. Remember your password for the 'postgres' user
+4. Default port is usually 5432
+
+**macOS:**
+
+```bash
+# Using Homebrew
+brew install postgresql
+brew services start postgresql
+
+# Create a database
+createdb newsletter_db
+```
+
+**Linux:**
+
+```bash
+# Ubuntu/Debian
+sudo apt install postgresql postgresql-contrib
+
+# Start the service
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# Create database
+sudo -u postgres createdb newsletter_db
+```
+
+#### Option B: Cloud Database (Easier)
+
+- **Supabase** (Free tier): [supabase.com](https://supabase.com/)
+- **Railway** (Free tier): [railway.app](https://railway.app/)
+- **Neon** (Free tier): [neon.tech](https://neon.tech/)
+- **ElephantSQL** (Free tier): [elephantsql.com](https://elephantsql.com/)
+
+Choose any of these, create an account, create a PostgreSQL database, and copy the connection string.
+
+### Step 4: Get API Keys
+
+#### Firecrawl API Key (Required)
+
+1. Visit [Firecrawl](https://firecrawl.dev/)
+2. Sign up for an account
+3. Go to your dashboard
+4. Copy your API key (starts with `fc-`)
+
+#### OpenRouter API Key (Recommended)
+
+1. Visit [OpenRouter](https://openrouter.ai/)
+2. Sign up for an account
+3. Go to "Keys" section
+4. Create a new API key
+5. Copy the key (starts with `sk-or-`)
+
+**Alternative: OpenAI API Key**
+
+1. Visit [OpenAI](https://platform.openai.com/)
+2. Sign up and add billing information
+3. Go to API keys section
+4. Create new key
+5. Copy the key (starts with `sk-`)
+
+### Step 5: Clone and Set Up the Project
+
+1. **Download the project:**
+
+   ```bash
+   git clone <your-repo-url>
+   cd newsletter-generator
+   ```
+
+   _If you don't have git, download the ZIP file from GitHub and extract it._
+
+2. **Install dependencies:**
+
+   ```bash
+   yarn install
+   ```
+
+   _This will download all required packages. It may take a few minutes._
+
+3. **Create environment file:**
+
+   Create a file named `.env.local` in the project root folder with the following content:
+
+   ```env
+   # Database Connection
+   DATABASE_URL="postgresql://username:password@localhost:5432/newsletter_db"
+
+   # Replace with your actual values:
+   # For local PostgreSQL: postgresql://postgres:yourpassword@localhost:5432/newsletter_db
+   # For cloud database: use the connection string from your provider
+
+   # API Keys
+   FIRECRAWL_API_KEY="fc-your-firecrawl-api-key-here"
+   OPENROUTER_API_KEY="sk-or-your-openrouter-key-here"
+
+   # Optional: If using OpenAI instead of OpenRouter
+   # OPENAI_API_KEY="sk-your-openai-key-here"
+
+   # Optional: Your site URL (for API headers)
+   SITE_URL="http://localhost:3000"
+   ```
+
+4. **Set up the database:**
+
+   ```bash
+   # Generate Prisma client
+   yarn db:generate
+
+   # Create database tables
+   yarn db:push
+   ```
+
+5. **Start the application:**
+
+   ```bash
+   yarn dev
+   ```
+
+   The application will be available at: [http://localhost:3000](http://localhost:3000)
+
+## 📚 How to Use
+
+### 1. 🌐 Add News Sources
+
+1. **Open the application** in your web browser
+2. **Expand "Manage News Sources"** section
+3. **Add URLs** of news websites you want to monitor:
+   - Enter the main URL (e.g., `https://techcrunch.com`)
+   - Optionally give it a friendly name
+   - Click "Add URL"
+4. **Examples of good news sources:**
+   - Technology: `https://techcrunch.com`, `https://arstechnica.com`
+   - Business: `https://reuters.com`, `https://bloomberg.com`
+   - General: `https://bbc.com/news`, `https://cnn.com`
+
+### 2. 🎯 Set Brand Context (Optional but Recommended)
+
+1. **Expand "Brand Instructions"** section
+2. **Describe your brand/interests:**
+   ```
+   Example: "Focus on AI and machine learning technologies,
+   startup news, and tech industry trends. Particularly
+   interested in B2B SaaS, developer tools, and enterprise AI."
+   ```
+3. **Save** your brand context
+4. The AI will use this to score article relevance (0-10 scale)
+
+### 3. 📅 Fetch News Articles
+
+1. **Set date range** (defaults to last 7 days)
+2. **Click "Start Crawl"** to begin fetching articles
+3. **Monitor progress** in the dialog that appears
+4. **Wait for completion** (usually 2-5 minutes depending on sources)
+5. Articles will appear in the "Scraped Articles" section
+
+### 4. ⚡ Process Articles with AI
+
+1. **Browse the scraped articles** in the grid view
+2. **Click "Structure"** on articles you're interested in
+3. The AI will:
+   - Extract clean titles and summaries
+   - Determine publication dates
+   - Score brand relevance (if context provided)
+4. **Structured articles become "active"** and move to the top
+
+### 5. 📝 Select Articles for Newsletter
+
+1. **Active articles** (those processed by AI) appear first with green badges
+2. **Click on article cards** to select/deselect them
+3. **Selected articles** get blue borders and are included in generation
+4. **Use sorting options:**
+   - Date (Recent to Old / Old to Recent)
+   - Brand Score (High to Low / Low to High)
+
+### 6. 🤖 Generate Newsletter
+
+1. **Ensure you have selected articles** (blue bordered cards)
+2. **Click "Generate Newsletter"**
+3. **Wait for AI processing** (30-60 seconds)
+4. **Review generated content** in the markdown editor
+5. **Edit if needed** - you can modify the content directly
+
+### 7. 💾 Save and Manage
+
+1. **Click "Save Newsletter"** to store the final version
+2. **View previous newsletters** at the bottom of the page
+3. **Copy content** to clipboard for external use
+4. **Delete old newsletters** if needed
+
+## ⚙️ Advanced Configuration
+
+### Database Management
+
+View your data using Prisma Studio:
+
+```bash
 yarn db:studio
 ```
 
-### 4. Run the Application
+This opens a web interface at [http://localhost:5555](http://localhost:5555) where you can:
 
-```bash
-yarn dev
-```
+- View all stored URLs, articles, and newsletters
+- Edit data directly
+- Monitor database performance
 
-Visit [http://localhost:3000](http://localhost:3000) to use the application.
+### API Configuration
 
-## Usage Guide
+The application supports both OpenRouter and OpenAI:
 
-### 1. Adding News Sources
+**OpenRouter (Recommended)**:
 
-1. Enter a news website URL in the "Manage News Sources" section
-2. Optionally provide a friendly name for the source
-3. Click "Add" to save the URL to your database
+- More models available (Claude, GPT, etc.)
+- Often cheaper than direct OpenAI
+- Better for experimentation
 
-### 2. Crawling News
+**OpenAI Direct**:
 
-1. Set your desired date range (defaults to last 7 days)
-2. Click "Start Crawl" to crawl articles from your sources
-3. The system crawls each website using Firecrawl's Crawl API and processes content with OpenRouter LLM
-4. You can cancel the crawl at any time using the "Cancel Crawl" button
-5. News articles are saved to the database with AI-generated summaries
+- Direct access to GPT models
+- Requires billing setup
+- May have better response times
 
-### 3. Selecting News for Newsletter
+### Customizing the UI
 
-1. Browse the fetched news articles
-2. Click on cards to select/deselect articles for your newsletter
-3. Selected articles have a blue border and background
-4. Use the X button to remove articles you don't want
-5. Drag the grip icon to reorder articles
-
-### 4. Generating Newsletter
-
-1. Click "Save Selection" to persist your choices
-2. Click "Generate Newsletter" to create AI-powered content
-3. The system uses previous newsletters for context and consistency
-4. Generated content appears in a markdown editor
-
-### 5. Editing and Saving
-
-1. Edit the generated newsletter in the markdown editor
-2. Click "Save Newsletter" to store the final version
-3. Previous newsletters are shown at the bottom for reference
-
-## API Endpoints
-
-- `GET /api/urls` - Fetch all saved URLs
-- `POST /api/urls` - Add a new URL
-- `DELETE /api/urls/[id]` - Remove a URL
-- `GET /api/news` - Fetch all news items
-- `POST /api/fetch-news` - Crawl news from URLs using Firecrawl and process with OpenRouter LLM
-- `DELETE /api/fetch-news?jobId=<id>` - Cancel an active crawl job
-- `POST /api/news/save-selection` - Save selected news items
-- `GET /api/newsletters` - Fetch all newsletters
-- `POST /api/newsletters` - Save a new newsletter
-- `POST /api/generate-newsletter` - Generate newsletter content
-
-## Database Schema
-
-### URLs Table
-
-- `id` - Unique identifier
-- `url` - Website URL
-- `name` - Optional friendly name
-- `createdAt` - Creation timestamp
-
-### News Table
-
-- `id` - Unique identifier
-- `title` - Article headline
-- `summary` - AI-generated summary
-- `url` - Direct article link
-- `sourceUrl` - Source website URL
-- `publishedAt` - Article publication date
-- `scrapedAt` - When article was fetched
-- `isSelected` - Selection status
-- `order` - Display order
-
-### Newsletters Table
-
-- `id` - Unique identifier
-- `title` - Newsletter title
-- `content` - Generated content (markdown)
-- `generatedAt` - Generation timestamp
-- `savedAt` - Save timestamp
-
-### Newsletter-News Junction Table
-
-- Links newsletters to their source news articles
-- Maintains article order within newsletters
-
-## Configuration
-
-### Firecrawl Crawl + OpenRouter Processing
-
-The application uses a two-step process:
-
-1. **Firecrawl Crawl API**: Crawls news websites to extract raw markdown content
-2. **OpenRouter LLM Processing**: Uses AI to structure the content into articles with:
-   - Article titles, summaries, and publication dates
-   - Date range filtering
-   - Content deduplication and quality filtering
-   - Support for various news website formats
-
-### AI Newsletter Generation
-
-The newsletter generation uses:
-
-- Context from previous newsletters to maintain consistency
-- Custom prompts for professional newsletter formatting
-- Markdown output for easy editing
-- Configurable AI models via OpenRouter or OpenAI
-
-## Customization
-
-### Adding New UI Components
-
-Use Shadcn/UI to add components:
+The application uses Shadcn/UI components. To add new components:
 
 ```bash
 npx shadcn-ui@latest add [component-name]
 ```
 
-### Modifying AI Prompts
+Available components: button, card, dialog, input, select, textarea, etc.
 
-Edit the prompt in `/app/api/generate-newsletter/route.ts` to change newsletter style and format.
-
-### Extending Database Schema
-
-1. Modify `prisma/schema.prisma`
-2. Run `yarn db:push` to apply changes
-3. Update TypeScript interfaces in components
-
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-1. **Database Connection Errors**
+**Database Connection Errors:**
 
-   - Verify PostgreSQL is running
-   - Check DATABASE_URL format
-   - Ensure database exists
+- Ensure PostgreSQL is running
+- Check your `DATABASE_URL` in `.env.local`
+- Verify database exists and credentials are correct
 
-2. **API Key Issues**
+**API Key Issues:**
 
-   - Verify Firecrawl API key is valid
-   - Check OpenRouter/OpenAI key permissions
-   - Ensure environment variables are loaded
+- Confirm API keys are correctly set in `.env.local`
+- Check that keys haven't expired
+- Ensure sufficient credits/quota
 
-3. **News Fetching Failures**
-   - Some websites may block automated scraping
-   - Check Firecrawl rate limits
-   - Verify URL accessibility
+**Yarn Installation Problems:**
 
-### Debugging
+```bash
+# Clear yarn cache
+yarn cache clean
 
-- Check browser console for frontend errors
-- Monitor server logs for API issues
-- Use Prisma Studio to inspect database data
+# Remove node_modules and reinstall
+rm -rf node_modules
+yarn install
+```
 
-## Contributing
+**Port Already in Use:**
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+```bash
+# Kill process on port 3000
+npx kill-port 3000
 
-## License
+# Or run on different port
+yarn dev -p 3001
+```
 
-MIT License - see LICENSE file for details.
+### Getting Help
 
-## Support
+1. **Check the browser console** (F12) for error messages
+2. **Review the terminal output** where you ran `yarn dev`
+3. **Verify all environment variables** are set correctly
+4. **Test API keys** with simple curl commands
+5. **Ensure database is accessible** and tables exist
 
-For issues and questions:
+## 📊 Database Schema
 
-1. Check the troubleshooting section
-2. Review API documentation (Firecrawl, OpenRouter)
-3. Open an issue on GitHub
+The application uses 6 main data models:
+
+- **URLs**: Stores news source websites
+- **News**: Individual articles with AI processing status
+- **Newsletters**: Generated newsletter content
+- **NewsletterNews**: Links articles to newsletters
+- **BatchScrape**: Tracks crawling operations
+- **BrandContext**: Stores brand instructions for AI scoring
+
+## 🚀 Deployment
+
+### Local Production Build
+
+```bash
+# Build for production
+yarn build
+
+# Start production server
+yarn start
+```
+
+### Cloud Deployment
+
+The application can be deployed to:
+
+- **Vercel**: [vercel.com](https://vercel.com/) (Recommended for Next.js)
+- **Netlify**: [netlify.com](https://netlify.com/)
+- **Railway**: [railway.app](https://railway.app/)
+- **Heroku**: [heroku.com](https://heroku.com/)
+
+Remember to:
+
+1. Set environment variables in your hosting platform
+2. Ensure your database is accessible from the cloud
+3. Update `SITE_URL` to your domain
+
+## 📄 Available Scripts
+
+```bash
+# Development
+yarn dev          # Start development server
+yarn build        # Build for production
+yarn start        # Start production server
+yarn lint         # Run code linting
+
+# Database
+yarn db:generate  # Generate Prisma client
+yarn db:push      # Apply schema changes
+yarn db:studio    # Open database browser
+```
+
+## 🤝 Support
+
+If you encounter issues:
+
+1. **Check this README** for common solutions
+2. **Verify all prerequisites** are properly installed
+3. **Ensure API keys and database** are correctly configured
+4. **Check the application logs** for specific error messages
+
+## 📈 Tips for Best Results
+
+1. **Choose quality news sources** with consistent formatting
+2. **Write detailed brand context** for better AI scoring
+3. **Process articles regularly** to build a good content library
+4. **Review and edit** AI-generated content before publishing
+5. **Use date ranges strategically** to avoid duplicate content
+6. **Monitor API usage** to stay within limits
+
+---
+
+**Ready to create amazing newsletters?** Follow the installation steps above and start building your AI-powered newsletter generator today! 🚀
