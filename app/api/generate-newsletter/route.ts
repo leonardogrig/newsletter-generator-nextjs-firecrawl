@@ -86,7 +86,7 @@ Do NOT include:
 
     const response = await openai.chat.completions.create({
       model: process.env.OPENROUTER_API_KEY
-        ? "anthropic/claude-sonnet-4"
+        ? "google/gemini-2.5-pro"
         : "gpt-4o-mini",
       messages: [
         {
