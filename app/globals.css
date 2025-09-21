@@ -196,94 +196,24 @@
   border-color: hsl(var(--primary)) !important;
 }
 
-/* Date picker and popover fixes */
-[data-radix-popper-content-wrapper] {
-  z-index: 50 !important;
+/* Simple date input styling */
+.date-input {
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  transition: all 0.2s ease-in-out;
 }
 
-.popover-content {
-  background-color: hsl(var(--popover)) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+.date-input:focus {
+  outline: none;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
 }
 
-/* Calendar specific fixes */
-.rdp {
-  background-color: hsl(var(--popover)) !important;
-}
-
-.rdp-month {
-  background-color: hsl(var(--popover)) !important;
-}
-
-.rdp-table {
-  width: 100% !important;
-  border-collapse: separate !important;
-  border-spacing: 0 !important;
-}
-
-.rdp-head_row {
-  display: flex !important;
-  width: 100% !important;
-}
-
-.rdp-head_cell {
-  flex: 1 !important;
-  text-align: center !important;
-  padding: 0.5rem 0 !important;
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
-  color: hsl(var(--muted-foreground)) !important;
-  background-color: hsl(var(--popover)) !important;
-}
-
-.rdp-row {
-  display: flex !important;
-  width: 100% !important;
-  margin-top: 0.25rem !important;
-}
-
-.rdp-cell {
-  flex: 1 !important;
-  height: 2.25rem !important;
-  text-align: center !important;
-  position: relative !important;
-  padding: 0 !important;
-}
-
-.rdp-day_button {
-  width: 100% !important;
-  height: 100% !important;
-  background-color: transparent !important;
-  border: none !important;
-  border-radius: 0.375rem !important;
-  font-size: 0.875rem !important;
-  font-weight: normal !important;
-  cursor: pointer !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.2s ease-in-out !important;
-}
-
-.rdp-day_button:hover {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
-}
-
-.rdp-day_selected .rdp-day_button {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
-}
-
-.rdp-day_today .rdp-day_button {
-  background-color: hsl(var(--accent)) !important;
-  color: hsl(var(--accent-foreground)) !important;
-  font-weight: 600 !important;
-}
-
-.rdp-day_outside .rdp-day_button {
-  color: hsl(var(--muted-foreground)) !important;
-  opacity: 0.5 !important;
+.date-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+  cursor: pointer;
 }

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DatePicker } from "@/components/ui/date-picker-single";
+import { SimpleDateInput } from "@/components/ui/simple-date-input";
 import { CalendarDays } from "lucide-react";
 
 interface DateRangeFetchProps {
@@ -27,14 +27,14 @@ export function DateRangeFetch({
             <span className="text-sm font-medium">Date Range:</span>
           </div>
           <div className="flex items-center gap-2">
-            <DatePicker
+            <SimpleDateInput
               date={startDate}
               setDate={onStartDateChange}
               placeholder="Start date"
               className="w-[160px]"
             />
             <span className="text-sm text-gray-500">to</span>
-            <DatePicker
+            <SimpleDateInput
               date={endDate}
               setDate={onEndDateChange}
               placeholder="End date"
