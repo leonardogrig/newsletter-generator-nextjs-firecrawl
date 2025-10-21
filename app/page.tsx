@@ -347,6 +347,15 @@ export default function NewsAggregator() {
     });
   };
 
+  const checkAllNews = () => {
+    const allNewsIds = newsItems.map(news => news.id);
+    setSelectedNewsIds(new Set(allNewsIds));
+  };
+
+  const uncheckAllNews = () => {
+    setSelectedNewsIds(new Set());
+  };
+
   const deleteSelectedNews = async () => {
     if (selectedNewsIds.size === 0) {
       toast.error("No news items selected");
@@ -408,9 +417,6 @@ export default function NewsAggregator() {
       setSelectedTitle(null);
       setSelectedSubtitle(null);
       setIsNewsletterModalOpen(true);
-
-      // Clear selection
-      setSelectedNewsIds(new Set());
     } catch (error: unknown) {
       console.error("Failed to generate newsletter:", error);
       const errorMessage =
@@ -908,22 +914,40 @@ export default function NewsAggregator() {
               <h2 className="text-xl font-semibold text-gray-900">
                 Latest News ({newsItems.length})
               </h2>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <ArrowUpDown className="h-4 w-4 mr-2" />
-                    Sort by: {sortBy === "date" ? "Date" : "Rating"}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSortBy("date")}>
-                    Sort by Date
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortBy("rating")}>
-                    Sort by Rating
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={checkAllNews}
+                  disabled={newsItems.length === 0}
+                >
+                  Check All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={uncheckAllNews}
+                  disabled={selectedNewsIds.size === 0}
+                >
+                  Uncheck All
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <ArrowUpDown className="h-4 w-4 mr-2" />
+                      Sort by: {sortBy === "date" ? "Date" : "Rating"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setSortBy("date")}>
+                      Sort by Date
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortBy("rating")}>
+                      Sort by Rating
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             {newsItems.length === 0 ? (
               <Card>
