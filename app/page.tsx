@@ -84,6 +84,8 @@ export default function NewsAggregator() {
   const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "rating">("date");
+  const [isFetchingHN, setIsFetchingHN] = useState(false);
+  const [fetchingSummaryFor, setFetchingSummaryFor] = useState<string | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -260,6 +262,76 @@ export default function NewsAggregator() {
       });
     } finally {
       setIsFetching(false);
+    }
+  };
+
+  const fetchHackerNews = async () => {
+    setIsFetchingHN(true);
+    toast.loading("Fetching Hacker News...", { id: "fetch-hn" });
+
+    try {
+      const response = await fetch("/api/cron/fetch-hackernews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch Hacker News");
+      }
+
+      const result = await response.json();
+
+      toast.success(
+        `Successfully added ${result.totalAdded} Hacker News items!`,
+        { id: "fetch-hn" }
+      );
+
+      // Reload news and search terms to show updated counts
+      loadNews();
+      loadSearchTerms();
+    } catch (error: unknown) {
+      console.error("Failed to fetch Hacker News:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to fetch Hacker News";
+      toast.error(errorMessage, {
+        id: "fetch-hn",
+      });
+    } finally {
+      setIsFetchingHN(false);
+    }
+  };
+
+  const fetchSummaryForNews = async (newsId: string) => {
+    setFetchingSummaryFor(newsId);
+    toast.loading("Fetching summary...", { id: `fetch-summary-${newsId}` });
+
+    try {
+      const response = await fetch(`/api/news/${newsId}/fetch-summary`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch summary");
+      }
+
+      toast.success("Summary fetched successfully!", {
+        id: `fetch-summary-${newsId}`,
+      });
+
+      // Reload news to show the updated summary
+      loadNews();
+    } catch (error: unknown) {
+      console.error("Failed to fetch summary:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to fetch summary";
+      toast.error(errorMessage, {
+        id: `fetch-summary-${newsId}`,
+      });
+    } finally {
+      setFetchingSummaryFor(null);
     }
   };
 
@@ -476,6 +548,20 @@ export default function NewsAggregator() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <Button
+                  onClick={fetchHackerNews}
+                  disabled={isFetchingHN}
+                  variant="outline"
+                >
+                  {isFetchingHN ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Fetching...
+                    </>
+                  ) : (
+                    "Fetch Hacker News"
+                  )}
+                </Button>
                 {lastFetchTime && (
                   <span className="text-xs text-gray-500">
                     Last fetched {formatDistance(lastFetchTime, new Date(), { addSuffix: true })}
@@ -899,13 +985,41 @@ export default function NewsAggregator() {
                       </div>
                     </CardHeader>
                     <CardContent className="pl-10">
-                      <p className="text-sm text-gray-600 mb-3">{news.summary}</p>
+                      {news.summary ? (
+                        <p className="text-sm text-gray-600 mb-3">{news.summary}</p>
+                      ) : (
+                        <div className="mb-3">
+                          <p className="text-sm text-gray-400 italic mb-2">No summary available</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              fetchSummaryForNews(news.id);
+                            }}
+                            disabled={fetchingSummaryFor === news.id}
+                          >
+                            {fetchingSummaryFor === news.id ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Fetching...
+                              </>
+                            ) : (
+                              "Fetch summary?"
+                            )}
+                          </Button>
+                        </div>
+                      )}
                       {news.labels && news.labels.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 justify-end">
                           {news.labels.map((label) => (
                             <span
                               key={label}
-                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                label === "HACKER_NEWS"
+                                  ? "bg-orange-100 text-orange-800"
+                                  : "bg-blue-100 text-blue-800"
+                              }`}
                             >
                               {label}
                             </span>

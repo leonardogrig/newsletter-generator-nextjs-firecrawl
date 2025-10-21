@@ -30,14 +30,14 @@ model News {
   title        String
   summary      String     @db.Text
   url          String     @unique
-  searchTermId String
+  searchTermId String?
   brandScore   Float?     // Score from 0-5 indicating brand resonance
   labels       String[]   // Labels: innovation, tool, study, report, gossip
   publishedAt  String?    // Original date string from Firecrawl (e.g., "4 minutes ago")
   fetchedAt    DateTime   @default(now())
 
   // Relations
-  searchTerm SearchTerm @relation(fields: [searchTermId], references: [id], onDelete: Cascade)
+  searchTerm SearchTerm? @relation(fields: [searchTermId], references: [id], onDelete: Cascade)
 
   @@map("news")
 }
