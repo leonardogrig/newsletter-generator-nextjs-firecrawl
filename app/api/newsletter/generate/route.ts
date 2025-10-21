@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL_GENERATOR || "";
 
 // Initialize OpenRouter client
 const openrouter = new OpenAI({

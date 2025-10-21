@@ -53,22 +53,31 @@ async function scrapeHackerNews(): Promise<string> {
   return data.data.markdown;
 }
 
-async function extractNewsItems(markdown: string): Promise<HackerNewsItem[]> {
-  const prompt = `You are a Hacker News parser. Extract all news items from the markdown content below.
+async function extractNewsItems(markdown: string, searchTerms: string[]): Promise<HackerNewsItem[]> {
+  const searchTermsList = searchTerms.length > 0
+    ? searchTerms.map(term => `- ${term}`).join('\n')
+    : "No search terms configured";
+
+  const prompt = `You are a Hacker News parser. Extract news items from the markdown content below that are RELEVANT to the user's interests.
+
+User's Search Terms (topics of interest):
+${searchTermsList}
 
 For each news item, extract:
 - title: The headline/title of the story
 - url: The URL link to the story (NOT the HN comments link, but the actual story URL)
 
-IMPORTANT:
-- Only extract the main story links, not the comment links
+IMPORTANT FILTERING RULES:
+- ONLY include news items that are related to at least one of the search terms above
 - Skip any "Show HN", "Ask HN" or "Tell HN" posts
-- Return up to 30 most recent news items
+- Only extract the main story links, not the comment links
+- Be somewhat lenient with relevance - if a story is tangentially related, include it
+- Return up to 30 most relevant news items
 
 Markdown content:
 ${markdown}
 
-Return a JSON object with a "news" array containing the extracted news items.`;
+Return a JSON object with a "news" array containing ONLY the relevant extracted news items.`;
 
   const response = await openrouter.chat.completions.create({
     model: OPENROUTER_MODEL,
@@ -195,17 +204,25 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Scrape Hacker News
+    // 1. Get search terms to filter by
+    const searchTerms = await prisma.searchTerm.findMany({
+      select: { term: true },
+    });
+    const searchTermsList = searchTerms.map(st => st.term);
+
+    console.log(`Found ${searchTermsList.length} search terms to filter by: ${searchTermsList.join(', ')}`);
+
+    // 2. Scrape Hacker News
     console.log("Scraping Hacker News...");
     const markdown = await scrapeHackerNews();
 
-    // 2. Extract news items using LLM
-    console.log("Extracting news items from markdown...");
-    const newsItems = await extractNewsItems(markdown);
+    // 3. Extract news items using LLM, filtered by search terms
+    console.log("Extracting relevant news items from markdown...");
+    const newsItems = await extractNewsItems(markdown, searchTermsList);
 
-    console.log(`Extracted ${newsItems.length} news items`);
+    console.log(`Extracted ${newsItems.length} relevant news items`);
 
-    // 3. Get news from the past week for deduplication
+    // 4. Get news from the past week for deduplication
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
@@ -224,13 +241,13 @@ export async function POST(request: Request) {
 
     console.log(`Found ${recentNews.length} news items from the past week for deduplication`);
 
-    // 4. Deduplicate using LLM
+    // 5. Deduplicate using LLM
     console.log("Deduplicating news items...");
     const uniqueNewsItems = await deduplicateHackerNews(newsItems, recentNews);
 
     console.log(`After deduplication: ${uniqueNewsItems.length} unique news items`);
 
-    // 5. Store unique news items with HACKER_NEWS label and no search term
+    // 6. Store unique news items with HACKER_NEWS label and no search term
     let addedCount = 0;
     let skippedCount = 0;
 
