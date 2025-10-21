@@ -42,8 +42,35 @@ interface NewsItem {
 }
 
 async function searchWithFirecrawl(
-  query: string
+  query: string,
+  timeRange: string
 ): Promise<FirecrawlSearchResult[]> {
+  // Convert timeRange to Firecrawl tbs format
+  // qdr:h = past hour
+  // qdr:d = past day
+  // qdr:w = past week
+  // For custom ranges, we use qdr:h for hour-based, qdr:d for day-based
+  let tbsValue: string;
+  switch (timeRange) {
+    case "1h":
+      tbsValue = "qdr:h"; // Last hour
+      break;
+    case "12h":
+      tbsValue = "qdr:h12"; // Last 12 hours
+      break;
+    case "24h":
+      tbsValue = "qdr:d"; // Last day
+      break;
+    case "48h":
+      tbsValue = "qdr:d2"; // Last 2 days
+      break;
+    case "72h":
+      tbsValue = "qdr:d3"; // Last 3 days
+      break;
+    default:
+      tbsValue = "qdr:h"; // Default to last hour
+  }
+
   const url = "https://api.firecrawl.dev/v2/search";
   const options = {
     method: "POST",
@@ -55,7 +82,7 @@ async function searchWithFirecrawl(
       query,
       sources: ["news"],
       categories: [],
-      tbs: "qdr:h", // Last hour
+      tbs: tbsValue,
       limit: 10,
       scrapeOptions: {
         onlyMainContent: true,
@@ -258,7 +285,7 @@ Return a JSON object with a "news" array containing the unique, scored, and labe
   }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     if (!FIRECRAWL_API_KEY) {
       return NextResponse.json(
@@ -273,6 +300,10 @@ export async function POST() {
         { status: 500 }
       );
     }
+
+    // Get time range from request body (default to 1h)
+    const body = await request.json().catch(() => ({}));
+    const timeRange = body.timeRange || "1h";
 
     // 1. Get brand persona
     const brandPersona = await prisma.brandPersona.findFirst();
@@ -294,10 +325,10 @@ export async function POST() {
     // 3. For each search term, fetch news
     for (const searchTerm of searchTerms) {
       try {
-        console.log(`Fetching news for term: ${searchTerm.term}`);
+        console.log(`Fetching news for term: ${searchTerm.term} (${timeRange})`);
 
         // 4. Call Firecrawl search API
-        const searchResults = await searchWithFirecrawl(searchTerm.term);
+        const searchResults = await searchWithFirecrawl(searchTerm.term, timeRange);
 
         if (searchResults.length === 0) {
           results[searchTerm.term] = { added: 0, duplicates: 0 };

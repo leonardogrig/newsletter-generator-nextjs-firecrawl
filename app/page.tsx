@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, formatDistance } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,8 +16,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2, FileText } from "lucide-react";
+import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2, FileText, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SearchTerm {
   id: string;
@@ -40,13 +46,6 @@ interface NewsItem {
   searchTerm: {
     term: string;
   };
-}
-
-interface BrandPersona {
-  id: string;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface Newsletter {
@@ -82,6 +81,7 @@ export default function NewsAggregator() {
   const [pendingNewsletterId, setPendingNewsletterId] = useState<string | null>(null);
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -89,6 +89,12 @@ export default function NewsAggregator() {
     loadNews();
     loadBrandPersona();
     loadNewsletters();
+
+    // Load last fetch time from localStorage
+    const savedFetchTime = localStorage.getItem("lastFetchTime");
+    if (savedFetchTime) {
+      setLastFetchTime(new Date(savedFetchTime));
+    }
   }, []);
 
   const loadSearchTerms = async () => {
@@ -207,18 +213,20 @@ export default function NewsAggregator() {
     }
   };
 
-  const fetchNews = async () => {
+  const fetchNews = async (selectedTimeRange: string) => {
     if (searchTerms.length === 0) {
       toast.error("Please add at least one search term first");
       return;
     }
 
     setIsFetching(true);
-    toast.loading("Fetching news...", { id: "fetch-news" });
+    toast.loading(`Fetching news from the last ${selectedTimeRange}...`, { id: "fetch-news" });
 
     try {
       const response = await fetch("/api/cron/fetch-news", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timeRange: selectedTimeRange }),
       });
 
       if (!response.ok) {
@@ -232,6 +240,11 @@ export default function NewsAggregator() {
         `Successfully added ${result.totalAdded} new articles!`,
         { id: "fetch-news" }
       );
+
+      // Update last fetch time
+      const now = new Date();
+      setLastFetchTime(now);
+      localStorage.setItem("lastFetchTime", now.toISOString());
 
       // Reload news and search terms to show updated counts
       loadNews();
@@ -386,19 +399,49 @@ export default function NewsAggregator() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                onClick={fetchNews}
-                disabled={isFetching || searchTerms.length === 0}
-              >
-                {isFetching ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Fetching...
-                  </>
-                ) : (
-                  "Fetch News"
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      disabled={isFetching || searchTerms.length === 0}
+                    >
+                      {isFetching ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Fetching...
+                        </>
+                      ) : (
+                        <>
+                          Fetch News
+                          <ChevronDown className="h-4 w-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => fetchNews("1h")}>
+                      Last 1 hour
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => fetchNews("12h")}>
+                      Last 12 hours
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => fetchNews("24h")}>
+                      Last 24 hours
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => fetchNews("48h")}>
+                      Last 48 hours
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => fetchNews("72h")}>
+                      Last 72 hours
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {lastFetchTime && (
+                  <span className="text-xs text-gray-500">
+                    Last fetched {formatDistance(lastFetchTime, new Date(), { addSuffix: true })}
+                  </span>
                 )}
-              </Button>
+              </div>
               {selectedNewsIds.size > 0 && (
                 <>
                   <Button
