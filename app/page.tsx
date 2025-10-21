@@ -16,7 +16,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2 } from "lucide-react";
+import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2, FileText } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface SearchTerm {
   id: string;
@@ -35,6 +36,7 @@ interface NewsItem {
   publishedAt: string | null;
   fetchedAt: string;
   brandScore: number | null;
+  labels: string[];
   searchTerm: {
     term: string;
   };
@@ -47,23 +49,46 @@ interface BrandPersona {
   updatedAt: string;
 }
 
+interface Newsletter {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  content: string;
+  newsIds: string[];
+  createdAt: string;
+}
+
+interface NewsletterSuggestions {
+  titles: string[];
+  subtitles: string[];
+}
+
 export default function NewsAggregator() {
   const [searchTerms, setSearchTerms] = useState<SearchTerm[]>([]);
   const [newTerm, setNewTerm] = useState("");
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [isFetching, setIsFetching] = useState(false);
-  const [brandPersona, setBrandPersona] = useState("");
+  const [brandPersona, setBrandPersona] = useState("25 to 35 year old males interested in using AI for coding. Entrepreneurs, Solopreneurs, Content creators, Developers.");
   const [savedBrandPersona, setSavedBrandPersona] = useState("");
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [selectedNewsIds, setSelectedNewsIds] = useState<Set<string>>(
     new Set()
   );
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [isNewsletterModalOpen, setIsNewsletterModalOpen] = useState(false);
+  const [selectedNewsletter, setSelectedNewsletter] = useState<Newsletter | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [pendingSuggestions, setPendingSuggestions] = useState<NewsletterSuggestions | null>(null);
+  const [pendingNewsletterId, setPendingNewsletterId] = useState<string | null>(null);
+  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
+  const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null);
 
   // Load initial data
   useEffect(() => {
     loadSearchTerms();
     loadNews();
     loadBrandPersona();
+    loadNewsletters();
   }, []);
 
   const loadSearchTerms = async () => {
@@ -96,6 +121,17 @@ export default function NewsAggregator() {
       setSavedBrandPersona(data.description || "");
     } catch (error) {
       console.error("Failed to load brand persona:", error);
+    }
+  };
+
+  const loadNewsletters = async () => {
+    try {
+      const response = await fetch("/api/newsletter");
+      const data = await response.json();
+      setNewsletters(data);
+    } catch (error) {
+      console.error("Failed to load newsletters:", error);
+      toast.error("Failed to load newsletters");
     }
   };
 
@@ -251,6 +287,90 @@ export default function NewsAggregator() {
     }
   };
 
+  const generateNewsletter = async () => {
+    if (selectedNewsIds.size === 0) {
+      toast.error("No news items selected");
+      return;
+    }
+
+    setIsGenerating(true);
+    toast.loading("Generating newsletter...", { id: "generate-newsletter" });
+
+    try {
+      const response = await fetch("/api/newsletter/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newsIds: Array.from(selectedNewsIds) }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate newsletter");
+      }
+
+      const result = await response.json();
+
+      toast.success("Newsletter generated! Please select a title and subtitle.", {
+        id: "generate-newsletter",
+      });
+
+      // Show suggestions modal
+      setPendingSuggestions(result.suggestions);
+      setPendingNewsletterId(result.newsletter.id);
+      setSelectedTitle(null);
+      setSelectedSubtitle(null);
+      setIsNewsletterModalOpen(true);
+
+      // Clear selection
+      setSelectedNewsIds(new Set());
+    } catch (error: unknown) {
+      console.error("Failed to generate newsletter:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to generate newsletter";
+      toast.error(errorMessage, {
+        id: "generate-newsletter",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const saveNewsletterTitleAndSubtitle = async () => {
+    if (!pendingNewsletterId || !selectedTitle || !selectedSubtitle) {
+      toast.error("Please select both a title and subtitle");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/newsletter/${pendingNewsletterId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: selectedTitle,
+          subtitle: selectedSubtitle,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update newsletter");
+      }
+
+      toast.success("Newsletter saved successfully!");
+
+      // Clear pending state
+      setPendingSuggestions(null);
+      setPendingNewsletterId(null);
+      setSelectedTitle(null);
+      setSelectedSubtitle(null);
+
+      // Reload newsletters
+      loadNewsletters();
+    } catch (error) {
+      console.error("Failed to save newsletter:", error);
+      toast.error("Failed to save newsletter");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -280,15 +400,204 @@ export default function NewsAggregator() {
                 )}
               </Button>
               {selectedNewsIds.size > 0 && (
-                <Button
-                  variant="destructive"
-                  onClick={deleteSelectedNews}
-                  size="sm"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete ({selectedNewsIds.size})
-                </Button>
+                <>
+                  <Button
+                    onClick={generateNewsletter}
+                    disabled={isGenerating}
+                    size="sm"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Generate Newsletter ({selectedNewsIds.size})
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={deleteSelectedNews}
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete ({selectedNewsIds.size})
+                  </Button>
+                </>
               )}
+              <Dialog
+                open={isNewsletterModalOpen}
+                onOpenChange={(open) => {
+                  setIsNewsletterModalOpen(open);
+                  if (!open) {
+                    setSelectedNewsletter(null);
+                    setPendingSuggestions(null);
+                    setPendingNewsletterId(null);
+                    setSelectedTitle(null);
+                    setSelectedSubtitle(null);
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white border-gray-200 shadow-xl">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {pendingSuggestions
+                        ? "Select Title and Subtitle"
+                        : "Newsletters"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {pendingSuggestions
+                        ? "Choose one title and one subtitle for your newsletter"
+                        : "View your generated newsletters"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {pendingSuggestions ? (
+                      // Suggestions view
+                      <div className="space-y-6">
+                        {/* Title suggestions */}
+                        <div>
+                          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                            Select a Title
+                          </h3>
+                          <div className="space-y-2">
+                            {pendingSuggestions.titles.map((title, index) => (
+                              <div
+                                key={index}
+                                className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                                  selectedTitle === title
+                                    ? "border-blue-500 bg-blue-50"
+                                    : "border-gray-200 hover:border-gray-300 bg-white"
+                                }`}
+                                onClick={() => setSelectedTitle(title)}
+                              >
+                                <p className="text-sm text-gray-900">{title}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Subtitle suggestions */}
+                        <div>
+                          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                            Select a Subtitle
+                          </h3>
+                          <div className="space-y-2">
+                            {pendingSuggestions.subtitles.map((subtitle, index) => (
+                              <div
+                                key={index}
+                                className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                                  selectedSubtitle === subtitle
+                                    ? "border-blue-500 bg-blue-50"
+                                    : "border-gray-200 hover:border-gray-300 bg-white"
+                                }`}
+                                onClick={() => setSelectedSubtitle(subtitle)}
+                              >
+                                <p className="text-sm text-gray-700">{subtitle}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={saveNewsletterTitleAndSubtitle}
+                          disabled={!selectedTitle || !selectedSubtitle}
+                          className="w-full"
+                        >
+                          Save Newsletter
+                        </Button>
+                      </div>
+                    ) : !selectedNewsletter ? (
+                      // Newsletter list view
+                      <>
+                        {newsletters.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-8">
+                            No newsletters generated yet. Select some news items and click &quot;Generate Newsletter&quot; to create one.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {newsletters.map((newsletter) => (
+                              <div
+                                key={newsletter.id}
+                                className="flex items-center justify-between bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => setSelectedNewsletter(newsletter)}
+                              >
+                                <div>
+                                  <h3 className="font-medium text-gray-900">
+                                    {newsletter.title}
+                                  </h3>
+                                  {newsletter.subtitle && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {newsletter.subtitle}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {new Date(newsletter.createdAt).toLocaleDateString('en-US', {
+                                      month: 'long',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </p>
+                                </div>
+                                <ExternalLink className="h-4 w-4 text-gray-400" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      // Newsletter content view
+                      <div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedNewsletter(null)}
+                          className="mb-4"
+                        >
+                          ← Back to list
+                        </Button>
+                        <div className="bg-white rounded-lg border border-gray-200 p-6">
+                          <h2 className="text-xl font-semibold mb-2 text-gray-900">
+                            {selectedNewsletter.title}
+                          </h2>
+                          {selectedNewsletter.subtitle && (
+                            <p className="text-sm text-gray-600 mb-6">
+                              {selectedNewsletter.subtitle}
+                            </p>
+                          )}
+                          <div className="prose prose-gray max-w-none">
+                            <ReactMarkdown
+                              components={{
+                                hr: ({ node, ...props }) => (
+                                  <hr className="my-6 border-gray-300" {...props} />
+                                ),
+                                p: ({ node, ...props }) => (
+                                  <p className="mb-4 text-gray-700 leading-relaxed" {...props} />
+                                ),
+                                strong: ({ node, ...props }) => (
+                                  <strong className="font-semibold text-gray-900" {...props} />
+                                ),
+                              }}
+                            >
+                              {selectedNewsletter.content}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="icon">
@@ -314,6 +623,7 @@ export default function NewsAggregator() {
                         onChange={(e) => setBrandPersona(e.target.value)}
                         rows={3}
                         className="resize-none"
+
                       />
                       <Button
                         onClick={saveBrandPersona}
@@ -403,7 +713,7 @@ export default function NewsAggregator() {
                   <Card
                     key={news.id}
                     className="hover:shadow-lg transition-shadow cursor-pointer relative"
-                    onClick={() => window.open(news.url, "_blank")}
+                    onClick={() => toggleNewsSelection(news.id)}
                   >
                     <div
                       className="absolute top-3 left-3 z-10"
@@ -419,7 +729,15 @@ export default function NewsAggregator() {
                         <CardTitle className="text-base line-clamp-2">
                           {news.title}
                         </CardTitle>
-                        <ExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0 mt-1" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(news.url, "_blank");
+                          }}
+                          className="flex-shrink-0"
+                        >
+                          <ExternalLink className="h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors mt-1" />
+                        </button>
                       </div>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2">
@@ -442,7 +760,19 @@ export default function NewsAggregator() {
                       </div>
                     </CardHeader>
                     <CardContent className="pl-10">
-                      <p className="text-sm text-gray-600">{news.summary}</p>
+                      <p className="text-sm text-gray-600 mb-3">{news.summary}</p>
+                      {news.labels && news.labels.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 justify-end">
+                          {news.labels.map((label) => (
+                            <span
+                              key={label}
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

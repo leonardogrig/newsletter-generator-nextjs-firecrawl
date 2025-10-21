@@ -32,6 +32,7 @@ model News {
   url          String     @unique
   searchTermId String
   brandScore   Float?     // Score from 0-5 indicating brand resonance
+  labels       String[]   // Labels: innovation, tool, study, report, gossip
   publishedAt  String?    // Original date string from Firecrawl (e.g., "4 minutes ago")
   fetchedAt    DateTime   @default(now())
 
@@ -48,4 +49,15 @@ model BrandPersona {
   updatedAt   DateTime @updatedAt
 
   @@map("brand_persona")
+}
+
+model Newsletter {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String?
+  content   String   @db.Text
+  newsIds   String[] // IDs of news items used to generate this newsletter
+  createdAt DateTime @default(now())
+
+  @@map("newsletters")
 }

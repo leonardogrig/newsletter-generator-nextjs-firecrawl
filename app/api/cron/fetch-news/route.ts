@@ -38,6 +38,7 @@ interface NewsItem {
   url: string;
   publishedAt?: string;
   brandScore?: number;
+  labels?: string[];
 }
 
 async function searchWithFirecrawl(
@@ -122,9 +123,16 @@ DEDUPLICATION RULES (apply in this order):
    - 4: Highly relevant
    - 5: Perfect fit for the brand
 
+4. LABELING: For each news item, identify applicable labels from this list (can have multiple):
+   - innovation: New inventions, breakthroughs, novel approaches, or creative solutions
+   - tool: Software, applications, platforms, frameworks, or utilities
+   - study: Research findings, academic papers, scientific studies, or data analysis
+   - report: Industry reports, surveys, statistics, market analysis, or trends
+   - gossip: Rumors, speculation, unconfirmed news, or opinion pieces
+
 IMPORTANT: Be aggressive with deduplication. If articles cover the same story/event, keep ONLY the best one.
 
-Return a JSON object with a "news" array containing the unique, scored news items.`
+Return a JSON object with a "news" array containing the unique, scored, and labeled news items.`
     : `You are a news analysis assistant. Your task is to deduplicate and score news items.
 
 Brand Persona:
@@ -147,9 +155,16 @@ TASKS:
    - 4: Highly relevant
    - 5: Perfect fit for the brand
 
+3. LABELING: For each news item, identify applicable labels from this list (can have multiple):
+   - innovation: New inventions, breakthroughs, novel approaches, or creative solutions
+   - tool: Software, applications, platforms, frameworks, or utilities
+   - study: Research findings, academic papers, scientific studies, or data analysis
+   - report: Industry reports, surveys, statistics, market analysis, or trends
+   - gossip: Rumors, speculation, unconfirmed news, or opinion pieces
+
 IMPORTANT: Be aggressive with deduplication. If articles cover the same story/event, keep ONLY the best one.
 
-Return a JSON object with a "news" array containing the unique, scored news items.`;
+Return a JSON object with a "news" array containing the unique, scored, and labeled news items.`;
 
   const response = await openrouter.chat.completions.create({
     model: "anthropic/claude-sonnet-4.5",
@@ -197,8 +212,16 @@ Return a JSON object with a "news" array containing the unique, scored news item
                     minimum: 0,
                     maximum: 5,
                   },
+                  labels: {
+                    type: "array",
+                    description: "Category labels for the news item",
+                    items: {
+                      type: "string",
+                      enum: ["innovation", "tool", "study", "report", "gossip"],
+                    },
+                  },
                 },
-                required: ["title", "summary", "url", "brandScore"],
+                required: ["title", "summary", "url", "brandScore", "labels"],
                 additionalProperties: false,
               },
             },
@@ -326,6 +349,7 @@ export async function POST() {
                 searchTermId: searchTerm.id,
                 brandScore: newsItem.brandScore || null,
                 publishedAt: newsItem.publishedAt || null,
+                labels: newsItem.labels || [],
               },
             });
             addedCount++;
