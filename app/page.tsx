@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2, FileText, ChevronDown } from "lucide-react";
+import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2, FileText, ChevronDown, ArrowUpDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import {
   DropdownMenu,
@@ -82,6 +82,7 @@ export default function NewsAggregator() {
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
+  const [sortBy, setSortBy] = useState<"date" | "rating">("date");
 
   // Load initial data
   useEffect(() => {
@@ -383,6 +384,18 @@ export default function NewsAggregator() {
       toast.error("Failed to save newsletter");
     }
   };
+
+  // Sort news items based on selected criteria
+  const sortedNewsItems = [...newsItems].sort((a, b) => {
+    if (sortBy === "rating") {
+      const scoreA = a.brandScore ?? -1;
+      const scoreB = b.brandScore ?? -1;
+      return scoreB - scoreA; // Higher scores first
+    } else {
+      // Sort by date (fetchedAt)
+      return new Date(b.fetchedAt).getTime() - new Date(a.fetchedAt).getTime(); // Most recent first
+    }
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -740,9 +753,27 @@ export default function NewsAggregator() {
 
           {/* News List */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Latest News ({newsItems.length})
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Latest News ({newsItems.length})
+              </h2>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <ArrowUpDown className="h-4 w-4 mr-2" />
+                    Sort by: {sortBy === "date" ? "Date" : "Rating"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setSortBy("date")}>
+                    Sort by Date
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy("rating")}>
+                    Sort by Rating
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             {newsItems.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-gray-500">
@@ -752,7 +783,7 @@ export default function NewsAggregator() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {newsItems.map((news) => (
+                {sortedNewsItems.map((news) => (
                   <Card
                     key={news.id}
                     className="hover:shadow-lg transition-shadow cursor-pointer relative"
