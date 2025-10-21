@@ -1,63 +1,83 @@
 "use client";
 
-import { subDays } from "date-fns";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2 } from "lucide-react";
 
-// Import all the modular components
-import { DateRangeFetch } from "@/components/DateRangeFetch";
-import { NewsItemsList } from "@/components/NewsItemsList";
-import { NewsletterEditor } from "@/components/NewsletterEditor";
-import { PreviousNewsletters } from "@/components/PreviousNewsletters";
-import { UrlManagement } from "@/components/UrlManagement";
+interface SearchTerm {
+  id: string;
+  term: string;
+  createdAt: string;
+  _count?: {
+    news: number;
+  };
+}
 
-// Import types
-import type { NewsItem, Newsletter, Url } from "@/components/types";
+interface NewsItem {
+  id: string;
+  title: string;
+  summary: string;
+  url: string;
+  publishedAt: string | null;
+  fetchedAt: string;
+  brandScore: number | null;
+  searchTerm: {
+    term: string;
+  };
+}
 
-export default function NewsletterGenerator() {
-  // State management
-  const [urls, setUrls] = useState<Url[]>([]);
-  const [newUrl, setNewUrl] = useState("");
-  const [newUrlName, setNewUrlName] = useState("");
-  const [brandInstructions, setBrandInstructions] = useState("");
-  const [savedBrandInstructions, setSavedBrandInstructions] = useState("");
+interface BrandPersona {
+  id: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function NewsAggregator() {
+  const [searchTerms, setSearchTerms] = useState<SearchTerm[]>([]);
+  const [newTerm, setNewTerm] = useState("");
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    subDays(new Date(), 7)
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedNewsletter, setGeneratedNewsletter] = useState("");
-  const [isUrlSectionCollapsed, setIsUrlSectionCollapsed] = useState(true);
-  const [isScrapedArticlesCollapsed, setIsScrapedArticlesCollapsed] =
-    useState(false);
-
-  const [structuringItems, setStructuringItems] = useState<Set<string>>(
+  const [isFetching, setIsFetching] = useState(false);
+  const [brandPersona, setBrandPersona] = useState("");
+  const [savedBrandPersona, setSavedBrandPersona] = useState("");
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [selectedNewsIds, setSelectedNewsIds] = useState<Set<string>>(
     new Set()
   );
 
   // Load initial data
   useEffect(() => {
-    loadUrls();
-    loadPreviousNews();
-    loadNewsletters();
-    loadBrandContext();
+    loadSearchTerms();
+    loadNews();
+    loadBrandPersona();
   }, []);
 
-  // API Functions
-  const loadUrls = async () => {
+  const loadSearchTerms = async () => {
     try {
-      const response = await fetch("/api/urls");
+      const response = await fetch("/api/search-terms");
       const data = await response.json();
-      setUrls(data);
+      setSearchTerms(data);
     } catch (error) {
-      console.error("Failed to load URLs:", error);
-      toast.error("Failed to load URLs");
+      console.error("Failed to load search terms:", error);
+      toast.error("Failed to load search terms");
     }
   };
 
-  const loadPreviousNews = async () => {
+  const loadNews = async () => {
     try {
       const response = await fetch("/api/news");
       const data = await response.json();
@@ -68,379 +88,366 @@ export default function NewsletterGenerator() {
     }
   };
 
-  const loadNewsletters = async () => {
+  const loadBrandPersona = async () => {
     try {
-      const response = await fetch("/api/newsletters");
+      const response = await fetch("/api/brand-persona");
       const data = await response.json();
-      setNewsletters(data);
+      setBrandPersona(data.description || "");
+      setSavedBrandPersona(data.description || "");
     } catch (error) {
-      console.error("Failed to load newsletters:", error);
-      toast.error("Failed to load newsletters");
+      console.error("Failed to load brand persona:", error);
     }
   };
 
-  const loadBrandContext = async () => {
+  const saveBrandPersona = async () => {
     try {
-      const response = await fetch("/api/brand-context");
-      const data = await response.json();
-      setBrandInstructions(data.instructions || "");
-      setSavedBrandInstructions(data.instructions || "");
-    } catch (error) {
-      console.error("Failed to load brand context:", error);
-      // Don't show error toast for this as it's not critical
-    }
-  };
-
-  // Brand Instructions Functions
-  const saveBrandInstructions = async () => {
-    try {
-      const response = await fetch("/api/brand-context", {
+      const response = await fetch("/api/brand-persona", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instructions: brandInstructions }),
+        body: JSON.stringify({ description: brandPersona }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save brand context");
+        throw new Error("Failed to save brand persona");
       }
 
       const data = await response.json();
-      setSavedBrandInstructions(data.instructions);
-      toast.success("Brand context saved successfully!");
+      setSavedBrandPersona(data.description);
+      toast.success("Brand persona saved successfully!");
     } catch (error) {
-      console.error("Failed to save brand context:", error);
-      toast.error("Failed to save brand context");
+      console.error("Failed to save brand persona:", error);
+      toast.error("Failed to save brand persona");
     }
   };
 
-  // URL Management Functions
-  const addUrl = async () => {
-    if (!newUrl.trim()) {
-      toast.error("Please enter a URL");
+  const addSearchTerm = async () => {
+    if (!newTerm.trim()) {
+      toast.error("Please enter a search term");
       return;
     }
 
     try {
-      new URL(newUrl);
-    } catch {
-      toast.error("Please enter a valid URL");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/urls", {
+      const response = await fetch("/api/search-terms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: newUrl, name: newUrlName }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to add URL");
-      }
-
-      const newUrlData = await response.json();
-      setUrls([...urls, newUrlData]);
-      setNewUrl("");
-      setNewUrlName("");
-      toast.success("URL added successfully");
-    } catch (error) {
-      console.error("Failed to add URL:", error);
-      toast.error("Failed to add URL");
-    }
-  };
-
-  const removeUrl = async (id: string) => {
-    try {
-      const response = await fetch(`/api/urls/${id}`, { method: "DELETE" });
-      if (!response.ok) {
-        throw new Error("Failed to remove URL");
-      }
-      setUrls(urls.filter((url) => url.id !== id));
-      toast.success("URL removed successfully");
-    } catch (error) {
-      console.error("Failed to remove URL:", error);
-      toast.error("Failed to remove URL");
-    }
-  };
-
-  // News Fetching Functions
-  const fetchNews = async () => {
-    if (urls.length === 0) {
-      toast.error("Please add some URLs first");
-      return;
-    }
-
-    if (!startDate || !endDate) {
-      toast.error("Please select valid start and end dates");
-      return;
-    }
-
-    toast.loading("Starting batch scrape with LLM processing...", {
-      id: "fetch-news",
-    });
-
-    try {
-      const response = await fetch("/api/fetch-news", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          urls: urls.map((u) => u.url),
-          dateRange: { from: startDate, to: endDate },
-          brandInstructions: savedBrandInstructions,
-        }),
+        body: JSON.stringify({ term: newTerm.trim() }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to start batch scrape");
+        throw new Error(errorData.error || "Failed to add search term");
+      }
+
+      const newSearchTerm = await response.json();
+      setSearchTerms([...searchTerms, newSearchTerm]);
+      setNewTerm("");
+      toast.success("Search term added successfully");
+    } catch (error: unknown) {
+      console.error("Failed to add search term:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to add search term";
+      toast.error(errorMessage);
+    }
+  };
+
+  const removeSearchTerm = async (id: string) => {
+    try {
+      const response = await fetch(`/api/search-terms/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to remove search term");
+      }
+
+      setSearchTerms(searchTerms.filter((term) => term.id !== id));
+      toast.success("Search term removed successfully");
+
+      // Reload news to reflect the change
+      loadNews();
+    } catch (error) {
+      console.error("Failed to remove search term:", error);
+      toast.error("Failed to remove search term");
+    }
+  };
+
+  const fetchNews = async () => {
+    if (searchTerms.length === 0) {
+      toast.error("Please add at least one search term first");
+      return;
+    }
+
+    setIsFetching(true);
+    toast.loading("Fetching news...", { id: "fetch-news" });
+
+    try {
+      const response = await fetch("/api/cron/fetch-news", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch news");
       }
 
       const result = await response.json();
 
       toast.success(
-        `Successfully processed ${
-          result.articleCount || 0
-        } articles! Check the scraped articles below.`,
+        `Successfully added ${result.totalAdded} new articles!`,
         { id: "fetch-news" }
       );
 
-      // Refresh news items to show the new articles
-      loadPreviousNews();
-    } catch (error: any) {
-      console.error("Failed to start batch scrape:", error);
-      toast.error(error.message || "Failed to start batch scrape", {
+      // Reload news and search terms to show updated counts
+      loadNews();
+      loadSearchTerms();
+    } catch (error: unknown) {
+      console.error("Failed to fetch news:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to fetch news";
+      toast.error(errorMessage, {
         id: "fetch-news",
       });
+    } finally {
+      setIsFetching(false);
     }
   };
 
-  // News Item Functions
-  const structureNewsItem = async (newsId: string) => {
-    try {
-      setStructuringItems((prev) => new Set([...prev, newsId]));
-
-      const response = await fetch("/api/news/structure", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newsId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to structure news item");
-      }
-
-      const updatedNewsItem = await response.json();
-
-      setNewsItems((items) =>
-        items.map((item) =>
-          item.id === newsId ? { ...updatedNewsItem, structured: true } : item
-        )
-      );
-
-      if (updatedNewsItem.hasValidArticle) {
-        toast.success("Article structured and activated!", { duration: 3000 });
-      } else {
-        toast.warning("No valid article found in this content", {
-          duration: 3000,
-        });
-      }
-    } catch (error: any) {
-      console.error("Failed to structure news item:", error);
-      toast.error(error.message || "Failed to structure news item", {
-        duration: 3000,
-      });
-    } finally {
-      setStructuringItems((prev) => {
-        const newSet = new Set(prev);
+  const toggleNewsSelection = (newsId: string) => {
+    setSelectedNewsIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(newsId)) {
         newSet.delete(newsId);
-        return newSet;
-      });
-    }
-  };
-
-  const removeNewsItem = async (id: string) => {
-    try {
-      const response = await fetch(`/api/news/${id}`, { method: "DELETE" });
-      if (!response.ok) {
-        throw new Error("Failed to delete news item");
+      } else {
+        newSet.add(newsId);
       }
-      setNewsItems(newsItems.filter((item) => item.id !== id));
-      toast.success("News article deleted successfully");
-    } catch (error) {
-      console.error("Failed to delete news item:", error);
-      toast.error("Failed to delete news article");
-    }
+      return newSet;
+    });
   };
 
-  // Newsletter Generation Functions
-  const generateNewsletter = async () => {
-    const selectedItems = newsItems.filter((item) => item.isSelected);
-    if (selectedItems.length === 0) {
-      toast.error("Please select at least one news item");
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      const response = await fetch("/api/generate-newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          newsItems: selectedItems,
-          previousNewsletters: newsletters.slice(0, 3), // Include last 3 for context
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate newsletter");
-      }
-
-      const data = await response.json();
-      setGeneratedNewsletter(data.content);
-      toast.success("Newsletter generated successfully!");
-    } catch (error) {
-      console.error("Failed to generate newsletter:", error);
-      toast.error("Failed to generate newsletter");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const saveFinalNewsletter = async () => {
-    if (!generatedNewsletter.trim()) {
-      toast.error("No newsletter content to save");
+  const deleteSelectedNews = async () => {
+    if (selectedNewsIds.size === 0) {
+      toast.error("No news items selected");
       return;
     }
 
     try {
-      const selectedItems = newsItems.filter((item) => item.isSelected);
-      const response = await fetch("/api/newsletters", {
+      const response = await fetch("/api/news/delete-multiple", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: generatedNewsletter,
-          newsIds: selectedItems.map((item) => item.id),
-        }),
+        body: JSON.stringify({ ids: Array.from(selectedNewsIds) }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save newsletter");
+        throw new Error("Failed to delete news items");
       }
 
-      toast.success("Newsletter saved successfully!");
-      setGeneratedNewsletter("");
-      loadNewsletters();
+      toast.success(`Deleted ${selectedNewsIds.size} news items`);
+      setSelectedNewsIds(new Set());
+      loadNews();
+      loadSearchTerms();
     } catch (error) {
-      console.error("Failed to save newsletter:", error);
-      toast.error("Failed to save newsletter");
+      console.error("Failed to delete news items:", error);
+      toast.error("Failed to delete news items");
     }
-  };
-
-  // Utility Functions
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Copied to clipboard!");
-    } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
-      toast.error("Failed to copy to clipboard");
-    }
-  };
-
-  const deleteNewsletter = async (id: string) => {
-    try {
-      const response = await fetch(`/api/newsletters/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to delete newsletter");
-      }
-      setNewsletters(newsletters.filter((newsletter) => newsletter.id !== id));
-      toast.success("Newsletter deleted successfully");
-    } catch (error) {
-      console.error("Failed to delete newsletter:", error);
-      toast.error("Failed to delete newsletter");
-    }
-  };
-
-  const updateNewsItemsOrder = (reorderedItems: NewsItem[]) => {
-    setNewsItems(reorderedItems);
-  };
-
-  const toggleNewsItemSelection = async (
-    itemId: string,
-    isSelected: boolean
-  ) => {
-    setNewsItems((items) =>
-      items.map((item) => (item.id === itemId ? { ...item, isSelected } : item))
-    );
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8">
-          {/* Left Column */}
-          <div className="xl:col-span-2 space-y-6">
-            {/* URL Management */}
-            <UrlManagement
-              urls={urls}
-              newUrl={newUrl}
-              newUrlName={newUrlName}
-              brandInstructions={brandInstructions}
-              isCollapsed={isUrlSectionCollapsed}
-              onNewUrlChange={setNewUrl}
-              onNewUrlNameChange={setNewUrlName}
-              onBrandInstructionsChange={setBrandInstructions}
-              onSaveBrandInstructions={saveBrandInstructions}
-              onAddUrl={addUrl}
-              onRemoveUrl={removeUrl}
-              onToggleCollapsed={() =>
-                setIsUrlSectionCollapsed(!isUrlSectionCollapsed)
-              }
-            />
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                News Aggregator
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Latest news based on your search terms
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={fetchNews}
+                disabled={isFetching || searchTerms.length === 0}
+              >
+                {isFetching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Fetching...
+                  </>
+                ) : (
+                  "Fetch News"
+                )}
+              </Button>
+              {selectedNewsIds.size > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={deleteSelectedNews}
+                  size="sm"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete ({selectedNewsIds.size})
+                </Button>
+              )}
+              <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Configuration</DialogTitle>
+                    <DialogDescription>
+                      Manage your brand persona and search terms
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-6 py-4">
+                    {/* Brand Persona Section */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Brand Persona
+                      </h3>
+                      <Textarea
+                        placeholder="e.g., 25 to 35 year old male interested in AI for coding"
+                        value={brandPersona}
+                        onChange={(e) => setBrandPersona(e.target.value)}
+                        rows={3}
+                        className="resize-none"
+                      />
+                      <Button
+                        onClick={saveBrandPersona}
+                        disabled={brandPersona === savedBrandPersona}
+                        size="sm"
+                      >
+                        Save Brand Persona
+                      </Button>
+                    </div>
 
-            {/* Date Range and Fetch */}
-            <DateRangeFetch
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-              onFetchNews={fetchNews}
-            />
+                    {/* Divider */}
+                    <div className="border-t" />
 
-            {/* News Items List */}
-            <NewsItemsList
-              newsItems={newsItems}
-              isGenerating={isGenerating}
-              structuringItems={structuringItems}
-              isCollapsed={isScrapedArticlesCollapsed}
-              onNewsItemsChange={updateNewsItemsOrder}
-              onRemoveNewsItem={removeNewsItem}
-              onStructureNewsItem={structureNewsItem}
-              onGenerateNewsletter={generateNewsletter}
-              onToggleCollapsed={() =>
-                setIsScrapedArticlesCollapsed(!isScrapedArticlesCollapsed)
-              }
-            />
+                    {/* Search Terms Section */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Search Terms
+                      </h3>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="e.g., ai coding"
+                          value={newTerm}
+                          onChange={(e) => setNewTerm(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              addSearchTerm();
+                            }
+                          }}
+                        />
+                        <Button onClick={addSearchTerm} size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add
+                        </Button>
+                      </div>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {searchTerms.length === 0 ? (
+                          <p className="text-sm text-gray-500">
+                            No search terms yet. Add one to get started.
+                          </p>
+                        ) : (
+                          searchTerms.map((term) => (
+                            <div
+                              key={term.id}
+                              className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
+                            >
+                              <div>
+                                <span className="font-medium">{term.term}</span>
+                                {term._count && (
+                                  <span className="ml-2 text-sm text-gray-500">
+                                    ({term._count.news} articles)
+                                  </span>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeSearchTerm(term.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
 
-            {/* Newsletter Editor */}
-            <NewsletterEditor
-              generatedNewsletter={generatedNewsletter}
-              isGenerating={isGenerating}
-              onContentChange={setGeneratedNewsletter}
-              onSave={saveFinalNewsletter}
-              onCopyToClipboard={copyToClipboard}
-            />
-
-            {/* Previous Newsletters */}
-            <PreviousNewsletters
-              newsletters={newsletters}
-              onCopyToClipboard={copyToClipboard}
-              onDeleteNewsletter={deleteNewsletter}
-            />
+          {/* News List */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Latest News ({newsItems.length})
+            </h2>
+            {newsItems.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-gray-500">
+                  No news articles yet. Add search terms and click &quot;Fetch
+                  News&quot; to get started.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {newsItems.map((news) => (
+                  <Card
+                    key={news.id}
+                    className="hover:shadow-lg transition-shadow cursor-pointer relative"
+                    onClick={() => window.open(news.url, "_blank")}
+                  >
+                    <div
+                      className="absolute top-3 left-3 z-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={selectedNewsIds.has(news.id)}
+                        onCheckedChange={() => toggleNewsSelection(news.id)}
+                      />
+                    </div>
+                    <CardHeader className="pl-10">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-base line-clamp-2">
+                          {news.title}
+                        </CardTitle>
+                        <ExternalLink className="h-4 w-4 text-gray-400 flex-shrink-0 mt-1" />
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">
+                            {news.publishedAt ||
+                              formatDistanceToNow(new Date(news.fetchedAt), {
+                                addSuffix: true,
+                              })}
+                          </span>
+                          <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded">
+                            <Star className="h-3 w-3 text-yellow-600 fill-yellow-600" />
+                            <span className="text-xs font-semibold text-yellow-900">
+                              {news.brandScore !== null &&
+                              news.brandScore !== undefined
+                                ? news.brandScore.toFixed(1)
+                                : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pl-10">
+                      <p className="text-sm text-gray-600">{news.summary}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

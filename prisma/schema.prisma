@@ -14,88 +14,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Url {
+model SearchTerm {
   id        String   @id @default(cuid())
-  url       String   @unique
-  name      String?
+  term      String   @unique
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  @@map("urls")
-}
+  // Relations
+  news News[]
 
-model BatchScrape {
-  id           String            @id @default(cuid())
-  jobId        String            @unique // Firecrawl batch scrape job ID
-  urls         String[] // Array of URLs being scraped
-  status       BatchScrapeStatus @default(PENDING)
-  startedAt    DateTime          @default(now())
-  completedAt  DateTime?
-  errorMessage String?
-  totalPages   Int? // Total pages found
-  pagesScraped Int? // Pages actually scraped
-
-  @@map("batch_scrapes")
-}
-
-enum BatchScrapeStatus {
-  PENDING
-  SCRAPING
-  COMPLETED
-  FAILED
-  CANCELLED
+  @@map("search_terms")
 }
 
 model News {
-  id          String    @id @default(cuid())
-  title       String
-  summary     String    @db.Text
-  fullContent String?   @db.Text // Store full scraped content
-  url         String
-  sourceUrl   String
-  publishedAt DateTime?
-  scrapedAt   DateTime  @default(now())
-  isSelected  Boolean   @default(false)
-  structured  Boolean   @default(false) // Whether the article has been structured/processed
-  brandScore  Float? // Brand relevance score (0-10, can be null)
+  id           String     @id @default(cuid())
+  title        String
+  summary      String     @db.Text
+  url          String     @unique
+  searchTermId String
+  brandScore   Float?     // Score from 0-5 indicating brand resonance
+  publishedAt  String?    // Original date string from Firecrawl (e.g., "4 minutes ago")
+  fetchedAt    DateTime   @default(now())
 
-  // For newsletter generation context
-  newsletters NewsletterNews[]
+  // Relations
+  searchTerm SearchTerm @relation(fields: [searchTermId], references: [id], onDelete: Cascade)
 
   @@map("news")
 }
 
-model Newsletter {
-  id          String    @id @default(cuid())
-  title       String?
-  content     String    @db.Text
-  generatedAt DateTime  @default(now())
-  savedAt     DateTime?
+model BrandPersona {
+  id          String   @id @default(cuid())
+  description String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // Relations
-  news NewsletterNews[]
-
-  @@map("newsletters")
-}
-
-model NewsletterNews {
-  id           String @id @default(cuid())
-  newsletterId String
-  newsId       String
-  order        Int    @default(0)
-
-  newsletter Newsletter @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
-  news       News       @relation(fields: [newsId], references: [id], onDelete: Cascade)
-
-  @@unique([newsletterId, newsId])
-  @@map("newsletter_news")
-}
-
-model BrandContext {
-  id           String   @id @default(cuid())
-  instructions String   @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@map("brand_context")
+  @@map("brand_persona")
 }
