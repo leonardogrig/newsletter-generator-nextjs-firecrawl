@@ -4,6 +4,7 @@ import OpenAI from "openai";
 
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
 
 // Initialize OpenRouter client
 const openrouter = new OpenAI({
@@ -84,7 +85,7 @@ Provide a relevance score from 0 to 5:
 Return ONLY a JSON object with a "score" field containing the numeric score.`;
 
   const response = await openrouter.chat.completions.create({
-    model: "anthropic/claude-sonnet-4.5",
+    model: OPENROUTER_MODEL,
     messages: [
       {
         role: "user",

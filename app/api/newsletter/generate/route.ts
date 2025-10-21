@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
 
 // Initialize OpenRouter client
 const openrouter = new OpenAI({
@@ -91,7 +92,7 @@ Please generate the newsletter content with all these news items in the specifie
 
     // Generate newsletter using LLM
     const response = await openrouter.chat.completions.create({
-      model: "anthropic/claude-sonnet-4.5",
+      model: OPENROUTER_MODEL,
       messages: [
         {
           role: "user",
@@ -126,7 +127,7 @@ Please provide exactly 5 title suggestions and 5 subtitle suggestions in valid J
 }`;
 
     const suggestionsResponse = await openrouter.chat.completions.create({
-      model: "anthropic/claude-sonnet-4.5",
+      model: OPENROUTER_MODEL,
       messages: [
         {
           role: "user",

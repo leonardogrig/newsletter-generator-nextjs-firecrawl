@@ -4,6 +4,7 @@ import OpenAI from "openai";
 
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
 
 // Initialize OpenRouter client
 const openrouter = new OpenAI({
@@ -70,7 +71,7 @@ ${markdown}
 Return a JSON object with a "news" array containing the extracted news items.`;
 
   const response = await openrouter.chat.completions.create({
-    model: "anthropic/claude-sonnet-4.5",
+    model: OPENROUTER_MODEL,
     messages: [
       {
         role: "user",
@@ -147,7 +148,7 @@ IMPORTANT: Be aggressive with deduplication. If articles cover the same story/ev
 Return a JSON object with a "news" array containing ONLY the unique news items.`;
 
   const response = await openrouter.chat.completions.create({
-    model: "anthropic/claude-sonnet-4.5",
+    model: OPENROUTER_MODEL,
     messages: [
       {
         role: "user",
