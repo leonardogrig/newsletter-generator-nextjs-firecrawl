@@ -82,8 +82,8 @@ async function searchWithFirecrawl(
       query,
       sources: ["news"],
       categories: [],
-      tbs: tbsValue,
-      limit: 10,
+      tbs: tbsValue, 
+      limit: 30,
       scrapeOptions: {
         onlyMainContent: true,
         maxAge: 172800000,

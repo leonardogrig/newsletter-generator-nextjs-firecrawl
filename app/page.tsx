@@ -79,6 +79,7 @@ export default function NewsAggregator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [pendingSuggestions, setPendingSuggestions] = useState<NewsletterSuggestions | null>(null);
   const [pendingNewsletterId, setPendingNewsletterId] = useState<string | null>(null);
+  const [pendingNewsletterContent, setPendingNewsletterContent] = useState<string | null>(null);
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
@@ -331,6 +332,7 @@ export default function NewsAggregator() {
       // Show suggestions modal
       setPendingSuggestions(result.suggestions);
       setPendingNewsletterId(result.newsletter.id);
+      setPendingNewsletterContent(result.newsletter.content);
       setSelectedTitle(null);
       setSelectedSubtitle(null);
       setIsNewsletterModalOpen(true);
@@ -374,6 +376,7 @@ export default function NewsAggregator() {
       // Clear pending state
       setPendingSuggestions(null);
       setPendingNewsletterId(null);
+      setPendingNewsletterContent(null);
       setSelectedTitle(null);
       setSelectedSubtitle(null);
 
@@ -382,6 +385,30 @@ export default function NewsAggregator() {
     } catch (error) {
       console.error("Failed to save newsletter:", error);
       toast.error("Failed to save newsletter");
+    }
+  };
+
+  const deleteNewsletter = async (newsletterId: string) => {
+    try {
+      const response = await fetch(`/api/newsletter/${newsletterId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete newsletter");
+      }
+
+      toast.success("Newsletter deleted successfully!");
+
+      // Close modal and clear state
+      setSelectedNewsletter(null);
+      setIsNewsletterModalOpen(false);
+
+      // Reload newsletters
+      loadNewsletters();
+    } catch (error) {
+      console.error("Failed to delete newsletter:", error);
+      toast.error("Failed to delete newsletter");
     }
   };
 
@@ -492,6 +519,7 @@ export default function NewsAggregator() {
                     setSelectedNewsletter(null);
                     setPendingSuggestions(null);
                     setPendingNewsletterId(null);
+                    setPendingNewsletterContent(null);
                     setSelectedTitle(null);
                     setSelectedSubtitle(null);
                   }
@@ -563,6 +591,34 @@ export default function NewsAggregator() {
                           </div>
                         </div>
 
+                        {/* Newsletter content preview */}
+                        {pendingNewsletterContent && (
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                              Newsletter Preview
+                            </h3>
+                            <div className="bg-white rounded-lg border border-gray-200 p-6 max-h-96 overflow-y-auto">
+                              <div className="prose prose-gray max-w-none">
+                                <ReactMarkdown
+                                  components={{
+                                    hr: ({ node, ...props }) => (
+                                      <hr className="my-6 border-gray-300" {...props} />
+                                    ),
+                                    p: ({ node, ...props }) => (
+                                      <p className="mb-4 text-gray-700 leading-relaxed" {...props} />
+                                    ),
+                                    strong: ({ node, ...props }) => (
+                                      <strong className="font-semibold text-gray-900" {...props} />
+                                    ),
+                                  }}
+                                >
+                                  {pendingNewsletterContent}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         <Button
                           onClick={saveNewsletterTitleAndSubtitle}
                           disabled={!selectedTitle || !selectedSubtitle}
@@ -614,14 +670,23 @@ export default function NewsAggregator() {
                     ) : (
                       // Newsletter content view
                       <div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedNewsletter(null)}
-                          className="mb-4"
-                        >
-                          ← Back to list
-                        </Button>
+                        <div className="flex items-center justify-between mb-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedNewsletter(null)}
+                          >
+                            ← Back to list
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteNewsletter(selectedNewsletter.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </Button>
+                        </div>
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                           <h2 className="text-xl font-semibold mb-2 text-gray-900">
                             {selectedNewsletter.title}
@@ -782,11 +847,11 @@ export default function NewsAggregator() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 {sortedNewsItems.map((news) => (
                   <Card
                     key={news.id}
-                    className="hover:shadow-lg transition-shadow cursor-pointer relative"
+                    className="hover:shadow-lg hover:scale-[1.01] transition-all duration-200 cursor-pointer relative"
                     onClick={() => toggleNewsSelection(news.id)}
                   >
                     <div

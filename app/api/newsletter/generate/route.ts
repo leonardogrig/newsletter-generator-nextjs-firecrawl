@@ -119,7 +119,11 @@ Example subtitle: "Nearly 300k private AI conversations leaked online, Chinese r
 Newsletter content:
 ${content}
 
-Please provide exactly 5 title suggestions and 5 subtitle suggestions.`;
+Please provide exactly 5 title suggestions and 5 subtitle suggestions in valid JSON format. Return ONLY the JSON object with this structure:
+{
+  "titles": ["title1", "title2", "title3", "title4", "title5"],
+  "subtitles": ["subtitle1", "subtitle2", "subtitle3", "subtitle4", "subtitle5"]
+}`;
 
     const suggestionsResponse = await openrouter.chat.completions.create({
       model: "anthropic/claude-sonnet-4.5",
@@ -130,38 +134,6 @@ Please provide exactly 5 title suggestions and 5 subtitle suggestions.`;
         },
       ],
       temperature: 0.7,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "newsletter_suggestions",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              titles: {
-                type: "array",
-                description: "Array of 5 title suggestions",
-                items: {
-                  type: "string",
-                },
-                minItems: 5,
-                maxItems: 5,
-              },
-              subtitles: {
-                type: "array",
-                description: "Array of 5 subtitle suggestions",
-                items: {
-                  type: "string",
-                },
-                minItems: 5,
-                maxItems: 5,
-              },
-            },
-            required: ["titles", "subtitles"],
-            additionalProperties: false,
-          },
-        },
-      },
     });
 
     const suggestionsContent = suggestionsResponse.choices[0]?.message?.content;
@@ -170,7 +142,19 @@ Please provide exactly 5 title suggestions and 5 subtitle suggestions.`;
       throw new Error("No suggestions response from LLM");
     }
 
-    const suggestions = JSON.parse(suggestionsContent);
+    // Try to parse JSON, handling potential markdown code blocks
+    let suggestions;
+    try {
+      // Remove markdown code blocks if present
+      const cleanedContent = suggestionsContent
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*/g, '')
+        .trim();
+      suggestions = JSON.parse(cleanedContent);
+    } catch (parseError) {
+      console.error("Failed to parse suggestions:", suggestionsContent);
+      throw new Error("Failed to parse suggestions as JSON");
+    }
 
     // Store newsletter in database with temporary title
     const newsletter = await prisma.newsletter.create({
