@@ -2,20 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 
-const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+// Use fallback values for build time (will be overridden at runtime)
+const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY || "";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
 
-// Initialize OpenRouter client
+// Initialize OpenRouter client with fallback for build time
 const openrouter = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
-  apiKey: OPENROUTER_API_KEY,
+  apiKey: OPENROUTER_API_KEY || "sk-dummy-key-for-build",
   defaultHeaders: {
     "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
   },
 });
 
-interface FirecrawlSearchResult {
+interface FirecrawlSearchResult{
   title: string;
   description?: string;
   url: string;

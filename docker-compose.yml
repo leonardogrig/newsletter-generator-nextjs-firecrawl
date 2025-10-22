@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: newsletter-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: newsletter_generator
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"  # Host:Container - Access DB on localhost:5433
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - newsletter-network
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: newsletter-app
+    restart: unless-stopped
+    ports:
+      - "5544:3000"  # Host:Container - Access app on localhost:5544
+    environment:
+      # Database connection (using service name 'db' as hostname)
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/newsletter_generator
+
+      # Application configuration
+      NODE_ENV: production
+      SITE_URL: ${SITE_URL:-http://localhost:5544}
+
+      # API Keys (must be set in .env file)
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-anthropic/claude-sonnet-4.5}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - newsletter-network
+    # Start the app (Prisma client is already generated during build)
+    command: node server.js
+    # Note: Run migrations manually with: docker-compose exec app npx prisma db push
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+
+# Network for service communication
+networks:
+  newsletter-network:
+    driver: bridge

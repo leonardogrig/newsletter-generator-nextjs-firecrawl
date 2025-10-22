@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { title, subtitle } = await request.json();
@@ -15,8 +15,11 @@ export async function PATCH(
       );
     }
 
+    // Await params (Next.js 15 requirement)
+    const { id } = await params;
+
     const newsletter = await prisma.newsletter.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         title,
         subtitle,
@@ -35,11 +38,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params (Next.js 15 requirement)
+    const { id } = await params;
+
     await prisma.newsletter.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

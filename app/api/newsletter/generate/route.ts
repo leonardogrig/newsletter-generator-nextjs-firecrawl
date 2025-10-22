@@ -2,26 +2,26 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL_GENERATOR || "";
-
-// Initialize OpenRouter client
-const openrouter = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: OPENROUTER_API_KEY,
-  defaultHeaders: {
-    "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
-  },
-});
-
 export async function POST(request: Request) {
   try {
+    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+    const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL_GENERATOR || "";
+
     if (!OPENROUTER_API_KEY) {
       return NextResponse.json(
         { error: "OPENROUTER_API_KEY not configured" },
         { status: 500 }
       );
     }
+
+    // Initialize OpenRouter client (lazy initialization to avoid build-time errors)
+    const openrouter = new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: OPENROUTER_API_KEY,
+      defaultHeaders: {
+        "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
+      },
+    });
 
     const { newsIds } = await request.json();
 

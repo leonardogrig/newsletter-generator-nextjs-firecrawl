@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 
-const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+// Use fallback values for build time (will be overridden at runtime)
+const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY || "";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
 
-// Initialize OpenRouter client
+// Initialize OpenRouter client with fallback for build time
 const openrouter = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
-  apiKey: OPENROUTER_API_KEY,
+  apiKey: OPENROUTER_API_KEY || "sk-dummy-key-for-build",
   defaultHeaders: {
     "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
   },
@@ -117,7 +118,7 @@ Return ONLY a JSON object with a "score" field containing the numeric score.`;
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     if (!FIRECRAWL_API_KEY) {
@@ -134,9 +135,12 @@ export async function POST(
       );
     }
 
+    // Await params (Next.js 15 requirement)
+    const { id } = await params;
+
     // 1. Get the news item
     const newsItem = await prisma.news.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!newsItem) {
@@ -170,7 +174,7 @@ export async function POST(
 
     // 6. Update the news item with summary, score, and date
     const updatedNews = await prisma.news.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         summary: firecrawlData.summary,
         brandScore,
