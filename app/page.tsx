@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2, FileText, ChevronDown, ArrowUpDown } from "lucide-react";
+import { Loader2, Plus, X, ExternalLink, Star, Settings, Trash2, FileText, ChevronDown, ArrowUpDown, Copy } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import {
   DropdownMenu,
@@ -57,11 +57,6 @@ interface Newsletter {
   createdAt: string;
 }
 
-interface NewsletterSuggestions {
-  titles: string[];
-  subtitles: string[];
-}
-
 export default function NewsAggregator() {
   const [searchTerms, setSearchTerms] = useState<SearchTerm[]>([]);
   const [newTerm, setNewTerm] = useState("");
@@ -77,11 +72,6 @@ export default function NewsAggregator() {
   const [isNewsletterModalOpen, setIsNewsletterModalOpen] = useState(false);
   const [selectedNewsletter, setSelectedNewsletter] = useState<Newsletter | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [pendingSuggestions, setPendingSuggestions] = useState<NewsletterSuggestions | null>(null);
-  const [pendingNewsletterId, setPendingNewsletterId] = useState<string | null>(null);
-  const [pendingNewsletterContent, setPendingNewsletterContent] = useState<string | null>(null);
-  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
-  const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "rating">("date");
   const [isFetchingHN, setIsFetchingHN] = useState(false);
@@ -406,17 +396,22 @@ export default function NewsAggregator() {
 
       const result = await response.json();
 
-      toast.success("Newsletter generated! Please select a title and subtitle.", {
+      // Automatically save with first title and subtitle
+      await fetch(`/api/newsletter/${result.newsletter.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: result.suggestions.titles[0],
+          subtitle: result.suggestions.subtitles[0],
+        }),
+      });
+
+      toast.success("Newsletter generated successfully!", {
         id: "generate-newsletter",
       });
 
-      // Show suggestions modal
-      setPendingSuggestions(result.suggestions);
-      setPendingNewsletterId(result.newsletter.id);
-      setPendingNewsletterContent(result.newsletter.content);
-      setSelectedTitle(null);
-      setSelectedSubtitle(null);
-      setIsNewsletterModalOpen(true);
+      // Reload newsletters
+      loadNewsletters();
     } catch (error: unknown) {
       console.error("Failed to generate newsletter:", error);
       const errorMessage =
@@ -429,42 +424,6 @@ export default function NewsAggregator() {
     }
   };
 
-  const saveNewsletterTitleAndSubtitle = async () => {
-    if (!pendingNewsletterId || !selectedTitle || !selectedSubtitle) {
-      toast.error("Please select both a title and subtitle");
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/newsletter/${pendingNewsletterId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: selectedTitle,
-          subtitle: selectedSubtitle,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update newsletter");
-      }
-
-      toast.success("Newsletter saved successfully!");
-
-      // Clear pending state
-      setPendingSuggestions(null);
-      setPendingNewsletterId(null);
-      setPendingNewsletterContent(null);
-      setSelectedTitle(null);
-      setSelectedSubtitle(null);
-
-      // Reload newsletters
-      loadNewsletters();
-    } catch (error) {
-      console.error("Failed to save newsletter:", error);
-      toast.error("Failed to save newsletter");
-    }
-  };
 
   const deleteNewsletter = async (newsletterId: string) => {
     try {
@@ -487,6 +446,16 @@ export default function NewsAggregator() {
     } catch (error) {
       console.error("Failed to delete newsletter:", error);
       toast.error("Failed to delete newsletter");
+    }
+  };
+
+  const copyNewsletterToClipboard = async (newsletter: Newsletter) => {
+    try {
+      await navigator.clipboard.writeText(newsletter.content);
+      toast.success("Newsletter copied to clipboard!");
+    } catch (error) {
+      console.error("Failed to copy newsletter:", error);
+      toast.error("Failed to copy to clipboard");
     }
   };
 
@@ -609,11 +578,6 @@ export default function NewsAggregator() {
                   setIsNewsletterModalOpen(open);
                   if (!open) {
                     setSelectedNewsletter(null);
-                    setPendingSuggestions(null);
-                    setPendingNewsletterId(null);
-                    setPendingNewsletterContent(null);
-                    setSelectedTitle(null);
-                    setSelectedSubtitle(null);
                   }
                 }}
               >
@@ -624,102 +588,13 @@ export default function NewsAggregator() {
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white border-gray-200 shadow-xl">
                   <DialogHeader>
-                    <DialogTitle>
-                      {pendingSuggestions
-                        ? "Select Title and Subtitle"
-                        : "Newsletters"}
-                    </DialogTitle>
+                    <DialogTitle>Newsletters</DialogTitle>
                     <DialogDescription>
-                      {pendingSuggestions
-                        ? "Choose one title and one subtitle for your newsletter"
-                        : "View your generated newsletters"}
+                      View your generated newsletters
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
-                    {pendingSuggestions ? (
-                      // Suggestions view
-                      <div className="space-y-6">
-                        {/* Title suggestions */}
-                        <div>
-                          <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                            Select a Title
-                          </h3>
-                          <div className="space-y-2">
-                            {pendingSuggestions.titles.map((title, index) => (
-                              <div
-                                key={index}
-                                className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                                  selectedTitle === title
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-gray-200 hover:border-gray-300 bg-white"
-                                }`}
-                                onClick={() => setSelectedTitle(title)}
-                              >
-                                <p className="text-sm text-gray-900">{title}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Subtitle suggestions */}
-                        <div>
-                          <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                            Select a Subtitle
-                          </h3>
-                          <div className="space-y-2">
-                            {pendingSuggestions.subtitles.map((subtitle, index) => (
-                              <div
-                                key={index}
-                                className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                                  selectedSubtitle === subtitle
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-gray-200 hover:border-gray-300 bg-white"
-                                }`}
-                                onClick={() => setSelectedSubtitle(subtitle)}
-                              >
-                                <p className="text-sm text-gray-700">{subtitle}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Newsletter content preview */}
-                        {pendingNewsletterContent && (
-                          <div>
-                            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                              Newsletter Preview
-                            </h3>
-                            <div className="bg-white rounded-lg border border-gray-200 p-6 max-h-96 overflow-y-auto">
-                              <div className="prose prose-gray max-w-none">
-                                <ReactMarkdown
-                                  components={{
-                                    hr: ({ node, ...props }) => (
-                                      <hr className="my-6 border-gray-300" {...props} />
-                                    ),
-                                    p: ({ node, ...props }) => (
-                                      <p className="mb-4 text-gray-700 leading-relaxed" {...props} />
-                                    ),
-                                    strong: ({ node, ...props }) => (
-                                      <strong className="font-semibold text-gray-900" {...props} />
-                                    ),
-                                  }}
-                                >
-                                  {pendingNewsletterContent}
-                                </ReactMarkdown>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        <Button
-                          onClick={saveNewsletterTitleAndSubtitle}
-                          disabled={!selectedTitle || !selectedSubtitle}
-                          className="w-full"
-                        >
-                          Save Newsletter
-                        </Button>
-                      </div>
-                    ) : !selectedNewsletter ? (
+                    {!selectedNewsletter ? (
                       // Newsletter list view
                       <>
                         {newsletters.length === 0 ? (
@@ -770,14 +645,24 @@ export default function NewsAggregator() {
                           >
                             ← Back to list
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteNewsletter(selectedNewsletter.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyNewsletterToClipboard(selectedNewsletter)}
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteNewsletter(selectedNewsletter.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </Button>
+                          </div>
                         </div>
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                           <h2 className="text-xl font-semibold mb-2 text-gray-900">
